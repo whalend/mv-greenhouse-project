@@ -5,6 +5,15 @@ date: "11/27/2017"
 output: html_document
 ---
 
+```{r set options, echo=F}
+knitr::opts_chunk$set(fig.width = 7.5, fig.height = 7)
+knitr::opts_chunk$set(dpi = 300)
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(warning = F)
+knitr::opts_chunk$set(message = F)
+```
+
+By request, I'm going to evaluate Kerry's analysis by first repeating what she did using her code. I copied over all lines from the "Analysis of full data set.docx" and will be editing things to flow in this Rmd report.
 
 ## Analysis by Kerry
 Analysis of full data set
@@ -12,22 +21,12 @@ Wednesday, August 5, 2015
 11:40 PM
  
 Data can be found in GH exp data and analysis.
- 
-> GH<-read.delim("clipboard")
-> attach(GH)
-> names(GH)
- [1] "Block"                "Population"           "Pop.Lat"             
- [4] "Pop.Database"         "Light"                "Herbivory"           
- [7] "Lat"                  "Long"                 "Date.of.First.Flower"
-[10] "FlowerOrdDate"        "Seeds.SH"             "HarvestOrdDate"      
-[13] "Avg..tiller.length"   "Mv.biomass"           "AvgSeedMass"         
-[16] "Avg.SLA"             
-> library(lme4)
-> library(car)
-> library(sciplot)
-> library(lmerTest)
- 
- 
+
+```{r load data}
+
+```
+
+
 ##### DATE OF FIRST FLOWER
  
  
