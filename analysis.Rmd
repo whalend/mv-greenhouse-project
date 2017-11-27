@@ -15,379 +15,263 @@ knitr::opts_chunk$set(message = F)
 
 By request, I'm going to evaluate Kerry's analysis by first repeating what she did using her code. I copied over all lines from the "Analysis of full data set.docx" and will be editing things to flow in this Rmd report.
 
-## Analysis by Kerry
+
+# Some notes:
+
+* Abiotic (shade) and biotic (herbivory) treatments were nested
+
+* Herbivory by fall army worm didn't reduce overhead leaf area enough (mean = 13.1%); supplemented to have total reduction of 45.5% overhead leaf area. 
+     
+    - These are conservative estimates because they don't account for the loss of biomass under the topmost level of vegetation.
+    
+
+
+# Analysis by Kerry
 Analysis of full data set
 Wednesday, August 5, 2015
 11:40 PM
  
 Data can be found in GH exp data and analysis.
 
+```{r load libraries}
+
+library(lme4); library(car); library(sciplot); library(lmerTest)
+library(plyr); library(dplyr)
+library(ggplot2)
+
+```
+
 ```{r load data}
+
+(gh_data <- readxl::read_excel("GH exp data and analysis.xlsx", sheet = 1))
+
+gh_data <- gh_data %>% 
+  select(Block:Notes) %>%
+  mutate(Light = as.factor(Light), Herbivory = as.factor(Herbivory),
+         `Pop#Lat` = as.factor(`Pop#Lat`)) %>% 
+  rename(pop_lat = `Pop#Lat`, pop_database = `Pop#Database`, 
+         first_flower_date = `Date of First Flower`, seeds_per_SH = `Seeds/SH`,
+         avg_tiller_length = `Avg. tiller length`, mv_biomass = `Mv biomass`)
 
 ```
 
 
-##### DATE OF FIRST FLOWER
- 
- 
-> m1<-lmer(FlowerOrdDate~Light*Herbivory*Lat+(1|Block),na.action=na.omit)
-> Anova(m1)
-Analysis of Deviance Table (Type II Wald chisquare tests)
- 
-Response: FlowerOrdDate
-                      Chisq Df Pr(>Chisq)    
-Light                1.8263  1     0.1766    
-Herbivory            0.0668  1     0.7960    
-Lat                 78.8789  1     <2e-16 ***
-Light:Herbivory      0.1113  1     0.7386    
-Light:Lat            0.0089  1     0.9249    
-Herbivory:Lat        0.3884  1     0.5331    
-Light:Herbivory:Lat  0.1600  1     0.6891    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-> qqnorm(residuals(m1))
+## Model: DATE OF FIRST FLOWER
 
-> plot(residuals(m1),fitted(m1))
+A mixed-effects model to examine the interaction of light and herbivory treatments with latitude of seedstock origin on the dat of first flowering. The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
 
-> step(m1)
+```{r anova date of first flower}
 
-Random effects:
-            Chi.sq Chi.DF elim.num p.value    
-(1 | Block)   80.3      1        0  <2e-16 ***
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+m1 <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data, na.action=na.omit)
+Anova(m1)
+
+qqnorm(residuals(m1))
+plot(residuals(m1),fitted(m1))
+
+step(m1)
+
+plot(gh_data$Lat, gh_data$FlowerOrdDate)
+FlowerReg <- lm(FlowerOrdDate~Lat, data = gh_data)
+abline(FlowerReg)
+
+summary(m1)
+
+```
  
-Fixed effects:
-                      Sum Sq  Mean Sq NumDF DenDF  F.value elim.num Pr(>F)    
-Light                 275.04   275.04     1  28.5  1.88529        6  0.180    
-Herbivory               8.55     8.55     1  27.5  0.06952        5  0.794    
-Lat                 11860.46 11860.46     1 341.4 79.48036        0 <2e-16 ***
-Light:Herbivory        16.58    16.58     1  26.6  0.11135        3  0.741    
-Light:Lat               4.55     4.55     1 339.7  0.00893        2  0.925    
-Herbivory:Lat          58.40    58.40     1 340.6  0.41005        4  0.522    
-Light:Herbivory:Lat    24.07    24.07     1 338.7  0.16004        1  0.689    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
  
-Least squares means:
-     Estimate Standard Error DF t-value Lower CI Upper CI p-value
- 
- Differences of LSMEANS:
-     Estimate Standard Error DF t-value Lower CI Upper CI p-value
- 
-Final model:
-lme4::lmer(formula = FlowerOrdDate ~ Lat + (1 | Block), REML = reml, 
-    na.action = na.omit, contrasts = l)
-Warning messages:
-1: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
-2: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Light' is absent, its contrast will be ignored
-3: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
-4: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Light' is absent, its contrast will be ignored
-5: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
-6: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Light' is absent, its contrast will be ignored
-7: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
- 
-> plot(Lat,FlowerOrdDate)
-> FlowerReg<-lm(FlowerOrdDate~Lat)
-> abline(FlowerReg)
+## Model: SEEDS PER SEED HEAD 
+
+```{r anova of seeds per seed head}
+
+m2 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
+Anova(m2)
+
+qqnorm(residuals(m2))
+plot(residuals(m2),fitted(m2))
+
+step(m2)
+
+summary(m2)
+
+```
+
+```{r plot seeds}
+
+ggplot(gh_data, aes(Light, seeds_per_SH, fill = Herbivory)) +
+  geom_boxplot(notch = T) +
+  theme_bw()
+
+ggplot(gh_data, aes(Lat, seeds_per_SH, color = Light, shape = Herbivory)) +
+  geom_point() +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = T, ) +
+  theme_bw() +
+  ylab("Seeds per seed head")
+
+```
 
 
-> summary(m1)
-Linear mixed model fit by REML ['merModLmerTest']
-Formula: FlowerOrdDate ~ Light * Herbivory * Lat + (1 | Block) 
  
-REML criterion at convergence: 2987.703 
- 
-Random effects:
- Groups   Name        Variance Std.Dev.
- Block    (Intercept)  88.05    9.383  
- Residual             150.37   12.262  
-Number of obs: 376, groups: Block, 32
- 
-Fixed effects:
-                          Estimate Std. Error t value Pr(>|t|)    
-(Intercept)               403.1078    28.6362  14.077  < 2e-16 ***
-Lightshade                -11.7565    38.0571  -0.309    0.758    
-HerbivoryY                -27.1755    38.2915  -0.710    0.478    
-Lat                        -3.5412     0.7680  -4.611 5.69e-06 ***
-Lightshade:HerbivoryY      19.0185    53.9868   0.352    0.725    
-Lightshade:Lat              0.2194     1.0203   0.215    0.830    
-HerbivoryY:Lat              0.7427     1.0272   0.723    0.470    
-Lightshade:HerbivoryY:Lat  -0.5792     1.4478  -0.400    0.689    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Correlation of Fixed Effects:
-            (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
-Lightshade  -0.752                                          
-HerbivoryY  -0.748  0.563                                   
-Lat         -0.991  0.746  0.741                            
-Lghtshd:HrY  0.530 -0.705 -0.709 -0.526                     
-Lightshd:Lt  0.746 -0.991 -0.558 -0.753  0.699              
-HerbvryY:Lt  0.741 -0.558 -0.991 -0.748  0.703  0.563       
-Lghtsh:HY:L -0.526  0.698  0.703  0.530 -0.991 -0.705 -0.709
- 
- 
- 
-##########SEEDS PER SEED HEAD ##################################################################################################################################
- 
-> m2<-lmer(Seeds.SH~Light*Herbivory*Lat+(1|Block))
-> Anova(m2)
-Analysis of Deviance Table (Type II Wald chisquare tests)
- 
-Response: Seeds.SH
-                       Chisq Df Pr(>Chisq)    
-Light               115.4501  1  < 2.2e-16 ***
-Herbivory            37.1482  1  1.095e-09 ***
-Lat                   3.2198  1    0.07275 .  
-Light:Herbivory       0.0271  1    0.86925    
-Light:Lat             2.3268  1    0.12716    
-Herbivory:Lat         6.0157  1    0.01418 *  
-Light:Herbivory:Lat   1.4956  1    0.22135    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-> qqnorm(residuals(m2))
+## Model: HARVEST DATE (SENESCENCE)
 
-> plot(residuals(m2),fitted(m2))
+```{r senescence model}
+
+m3<-lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
+
+Anova(m3)
+# Analysis of Deviance Table (Type II Wald chisquare tests)
+#  
+# Response: HarvestOrdDate
+#                       Chisq Df Pr(>Chisq)    
+# Light                4.1487  1    0.04167 *  
+# Herbivory            0.0109  1    0.91692    
+# Lat                 19.6053  1   9.52e-06 ***
+# Light:Herbivory      0.7779  1    0.37778    
+# Light:Lat            3.7434  1    0.05302 .  
+# Herbivory:Lat        0.9059  1    0.34122    
+# Light:Herbivory:Lat  0.8409  1    0.35913    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+
+qqnorm(residuals(m3))
+plot(residuals(m3),fitted(m3))
 
 
-> step(m2)
- 
-Random effects:
-            Chi.sq Chi.DF elim.num p.value   
-(1 | Block)   7.48      1        0   0.006 **
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Fixed effects:
-                      Sum Sq  Mean Sq NumDF DenDF F.value elim.num   Pr(>F)    
-Light               22382.06 22382.06     1  29.6 119.228        0 6.79e-12 ***
-Herbivory            8129.58  8129.58     1 335.6   9.335        0  0.00243 ** 
-Lat                   705.42   705.42     1 332.9   3.293        0  0.07046 .  
-Light:Herbivory         5.63     5.63     1  28.5   0.027        2  0.87066    
-Light:Lat             737.19   737.19     1 331.8   2.323        3  0.12842    
-Herbivory:Lat        1319.15  1319.15     1 332.9   7.019        0  0.00845 ** 
-Light:Herbivory:Lat   327.96   327.96     1 330.7   1.496        1  0.22222    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Least squares means:
-               Light Herbivory Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-Light  ambient   1.0        NA    59.53           1.52 29.7    39.1     56.4     62.6  <2e-16 ***
-Light  shade     2.0        NA    35.96           1.52 29.5    23.7     32.9     39.1  <2e-16 ***
-Herbivory  N      NA       1.0    54.41           1.52 29.7    35.8     51.3     57.5  <2e-16 ***
-Herbivory  Y      NA       2.0    41.08           1.52 29.5    27.0     38.0     44.2  <2e-16 ***
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
- Differences of LSMEANS:
-                    Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-Light ambient-shade     23.6           2.16 29.6   10.92    19.16     28.0  <2e-16 ***
-Herbivory N-Y           13.3           2.16 29.6    6.18     8.92     17.7  <2e-16 ***
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Final model:
-lme4::lmer(formula = Seeds.SH ~ Light + Herbivory + Lat + (1 | 
-    Block) + Herbivory:Lat, REML = reml, contrasts = l)
+# I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). Here is what occurred:
 
+which(residuals(m3)< -40)
+# [1] 316
+m3.2<-lmer(HarvestOrdDate~Light*Herbivory*Lat+(1|Block),data=harvest) 
+## the data frame "harvest" contains all GH data except for row 316.
 
-> summary(m2)
-Linear mixed model fit by REML ['lmerMod']
-Formula: Seeds.SH ~ Light * Herbivory * Lat + (1 | Block) 
- 
-REML criterion at convergence: 2997.085 
- 
-Random effects:
- Groups   Name        Variance Std.Dev.
- Block    (Intercept)  18.64    4.317  
- Residual             219.28   14.808  
-Number of obs: 365, groups: Block, 32
- 
-Fixed effects:
-                          Estimate Std. Error t value
-(Intercept)                132.862     34.691   3.830
-Lightshade                 -13.809     46.274  -0.298
-HerbivoryY                -132.618     46.167  -2.873
-Lat                         -1.809      0.937  -1.930
-Lightshade:HerbivoryY       78.714     65.102   1.209
-Lightshade:Lat              -0.254      1.249  -0.203
-HerbivoryY:Lat               3.236      1.246   2.596
-Lightshade:HerbivoryY:Lat   -2.149      1.757  -1.223
- 
-Correlation of Fixed Effects:
-            (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
-Lightshade  -0.750                                          
-HerbivoryY  -0.751  0.563                                   
-Lat         -0.998  0.748  0.750                            
-Lghtshd:HrY  0.533 -0.711 -0.709 -0.532                     
-Lightshd:Lt  0.748 -0.998 -0.562 -0.750  0.709              
-HerbvryY:Lt  0.750 -0.562 -0.998 -0.752  0.708  0.564       
-Lghtsh:HY:L -0.532  0.709  0.708  0.533 -0.998 -0.711 -0.709
- 
- 
- 
-###########HARVEST DATE (SENESCENCE) ###############################################################################################################################
- 
-> m3<-lmer(HarvestOrdDate~Light*Herbivory*Lat+(1|Block))
-> Light<-as.factor(Light)
-> Herbivory<-as.factor(Herbivory)
-> Anova(m3)
-Analysis of Deviance Table (Type II Wald chisquare tests)
- 
-Response: HarvestOrdDate
-                      Chisq Df Pr(>Chisq)    
-Light                4.1487  1    0.04167 *  
-Herbivory            0.0109  1    0.91692    
-Lat                 19.6053  1   9.52e-06 ***
-Light:Herbivory      0.7779  1    0.37778    
-Light:Lat            3.7434  1    0.05302 .  
-Herbivory:Lat        0.9059  1    0.34122    
-Light:Herbivory:Lat  0.8409  1    0.35913    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-> qqnorm(residuals(m3))
-> plot(residuals(m3),fitted(m3))
-
-
-
-####I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). Here is what occurred:
-> which(residuals(m3)< -40)
-[1] 316
-> m3.2<-lmer(HarvestOrdDate~Light*Herbivory*Lat+(1|Block),data=harvest) ### the data frame "harvest" contains all GH data except for row 316.
-> Anova(m3.2)
-Analysis of Deviance Table (Type II Wald chisquare tests)
- 
-Response: HarvestOrdDate
-                      Chisq Df Pr(>Chisq)    
-Light                4.1551  1    0.04151 *  
-Herbivory            0.0115  1    0.91447    
-Lat                 19.5916  1  9.589e-06 ***
-Light:Herbivory      0.7841  1    0.37588    
-Light:Lat            3.7929  1    0.05147 .  
-Herbivory:Lat        0.9356  1    0.33342    
-Light:Herbivory:Lat  0.8754  1    0.34947    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-> plot(fitted(m3.2),residuals(m3.2))
-> which(residuals(m3.2)< -40)
-[1] 315
-> harvest2<-harvest[-c(315),]
-> m3.3<-lmer(HarvestOrdDate~Light*Herbivory*Lat+(1|Block),data=harvest2)
-> Anova(m3.3)
-Analysis of Deviance Table (Type II Wald chisquare tests)
- 
-Response: HarvestOrdDate
-                      Chisq Df Pr(>Chisq)    
-Light                4.1546  1    0.04152 *  
-Herbivory            0.0112  1    0.91554    
-Lat                 19.5122  1  9.996e-06 ***
-Light:Herbivory      0.7822  1    0.37646    
-Light:Lat            3.7919  1    0.05150 .  
-Herbivory:Lat        0.9229  1    0.33671    
-Light:Herbivory:Lat  0.8662  1    0.35201    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-> plot(fitted(m3.3),residuals(m3.3))
-
-
-> which(residuals(m3.3)< -40)
-[1] 314
+Anova(m3.2)
+# Analysis of Deviance Table (Type II Wald chisquare tests)
+#  
+# Response: HarvestOrdDate
+#                       Chisq Df Pr(>Chisq)    
+# Light                4.1551  1    0.04151 *  
+# Herbivory            0.0115  1    0.91447    
+# Lat                 19.5916  1  9.589e-06 ***
+# Light:Herbivory      0.7841  1    0.37588    
+# Light:Lat            3.7929  1    0.05147 .  
+# Herbivory:Lat        0.9356  1    0.33342    
+# Light:Herbivory:Lat  0.8754  1    0.34947    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+# > plot(fitted(m3.2),residuals(m3.2))
+# > which(residuals(m3.2)< -40)
+# [1] 315
+# > harvest2<-harvest[-c(315),]
+# > m3.3<-lmer(HarvestOrdDate~Light*Herbivory*Lat+(1|Block),data=harvest2)
+# > Anova(m3.3)
+# Analysis of Deviance Table (Type II Wald chisquare tests)
+#  
+# Response: HarvestOrdDate
+#                       Chisq Df Pr(>Chisq)    
+# Light                4.1546  1    0.04152 *  
+# Herbivory            0.0112  1    0.91554    
+# Lat                 19.5122  1  9.996e-06 ***
+# Light:Herbivory      0.7822  1    0.37646    
+# Light:Lat            3.7919  1    0.05150 .  
+# Herbivory:Lat        0.9229  1    0.33671    
+# Light:Herbivory:Lat  0.8662  1    0.35201    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+# > plot(fitted(m3.3),residuals(m3.3))
+# 
+# 
+# > which(residuals(m3.3)< -40)
+# [1] 314
  
 ###Not really sure what to do about this. Maybe do nothing because it is not obvious from data set what data point the outlier represents, so was likely not a data entry problem.
-> step(m3)
+
+step(m3)
  
-Random effects:
-            Chi.sq Chi.DF elim.num p.value    
-(1 | Block)    310      1        0  <2e-16 ***
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Fixed effects:
-                      Sum Sq  Mean Sq NumDF DenDF F.value elim.num   Pr(>F)    
-Light                272.762  272.762     1    30   4.401        0   0.0444 *  
-Herbivory              0.712    0.712     1    29   0.014        4   0.9067    
-Lat                 1308.746 1308.746     1   339  19.961        0 1.08e-05 ***
-Light:Herbivory       48.713   48.713     1    28   0.756        2   0.3919    
-Light:Lat            206.369  206.369     1   338   3.161        5   0.0763 .  
-Herbivory:Lat         52.317   52.317     1   337   0.800        3   0.3717    
-Light:Herbivory:Lat   61.910   61.910     1   336   0.950        1   0.3304    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Least squares means:
-               Light Estimate Standard Error DF t-value Lower CI Upper CI p-value    
-Light  ambient     1   307.25           2.99 30  102.59      301      313  <2e-16 ***
-Light  shade       2   316.13           2.99 30  105.59      310      322  <2e-16 ***
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
- Differences of LSMEANS:
-                    Estimate Standard Error   DF t-value Lower CI Upper CI p-value  
-Light ambient-shade     -8.9           4.23 30.0    -2.1    -17.5   -0.235    0.04 *
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Final model:
-lme4::lmer(formula = HarvestOrdDate ~ Light + Lat + (1 | Block), 
-    REML = reml, contrasts = l)
-Warning messages:
-1: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
-2: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
-3: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
-4: In model.matrix.default(mt, mf, contrasts) :
-  variable 'Herbivory' is absent, its contrast will be ignored
+# Random effects:
+#             Chi.sq Chi.DF elim.num p.value    
+# (1 | Block)    310      1        0  <2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+#  
+# Fixed effects:
+#                       Sum Sq  Mean Sq NumDF DenDF F.value elim.num   Pr(>F)    
+# Light                272.762  272.762     1    30   4.401        0   0.0444 *  
+# Herbivory              0.712    0.712     1    29   0.014        4   0.9067    
+# Lat                 1308.746 1308.746     1   339  19.961        0 1.08e-05 ***
+# Light:Herbivory       48.713   48.713     1    28   0.756        2   0.3919    
+# Light:Lat            206.369  206.369     1   338   3.161        5   0.0763 .  
+# Herbivory:Lat         52.317   52.317     1   337   0.800        3   0.3717    
+# Light:Herbivory:Lat   61.910   61.910     1   336   0.950        1   0.3304    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+#  
+# Least squares means:
+#                Light Estimate Standard Error DF t-value Lower CI Upper CI p-value    
+# Light  ambient     1   307.25           2.99 30  102.59      301      313  <2e-16 ***
+# Light  shade       2   316.13           2.99 30  105.59      310      322  <2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+#  
+#  Differences of LSMEANS:
+#                     Estimate Standard Error   DF t-value Lower CI Upper CI p-value  
+# Light ambient-shade     -8.9           4.23 30.0    -2.1    -17.5   -0.235    0.04 *
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+#  
+# Final model:
+# lme4::lmer(formula = HarvestOrdDate ~ Light + Lat + (1 | Block), 
+#     REML = reml, contrasts = l)
+# Warning messages:
+# 1: In model.matrix.default(mt, mf, contrasts) :
+#   variable 'Herbivory' is absent, its contrast will be ignored
+# 2: In model.matrix.default(mt, mf, contrasts) :
+#   variable 'Herbivory' is absent, its contrast will be ignored
+# 3: In model.matrix.default(mt, mf, contrasts) :
+#   variable 'Herbivory' is absent, its contrast will be ignored
+# 4: In model.matrix.default(mt, mf, contrasts) :
+#   variable 'Herbivory' is absent, its contrast will be ignored
 
 
-> summary(m3)
-Linear mixed model fit by REML ['merModLmerTest']
-Formula: HarvestOrdDate ~ Light * Herbivory * Lat + (1 | Block) 
- 
-REML criterion at convergence: 2686.124 
- 
-Random effects:
- Groups   Name        Variance Std.Dev.
- Block    (Intercept) 144.33   12.014  
- Residual              65.16    8.072  
-Number of obs: 372, groups: Block, 32
- 
-Fixed effects:
-                          Estimate Std. Error t value Pr(>|t|)    
-(Intercept)               378.5104    19.4221  19.489  < 2e-16 ***
-Lightshade                -37.7400    25.7904  -1.463 0.144243    
-HerbivoryY                -28.8197    25.7831  -1.118 0.264406    
-Lat                        -1.9936     0.5110  -3.902 0.000115 ***
-Lightshade:HerbivoryY      26.7760    36.3188   0.737 0.461448    
-Lightshade:Lat              1.3659     0.6777   2.016 0.044637 *  
-HerbivoryY:Lat              0.8963     0.6774   1.323 0.186712    
-Lightshade:HerbivoryY:Lat  -0.9295     0.9536  -0.975 0.330399    
----
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
- 
-Correlation of Fixed Effects:
-            (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
-Lightshade  -0.753                                          
-HerbivoryY  -0.753  0.567                                   
-Lat         -0.971  0.731  0.732                            
-Lghtshd:HrY  0.535 -0.710 -0.710 -0.519                     
-Lightshd:Lt  0.732 -0.971 -0.552 -0.754  0.689              
-HerbvryY:Lt  0.733 -0.552 -0.971 -0.754  0.689  0.569       
-Lghtsh:HY:L -0.520  0.690  0.690  0.536 -0.971 -0.711 -0.710
- 
-######AVG TILLER LENGTH ################################################################################################################
- 
+summary(m3)
+# Linear mixed model fit by REML ['merModLmerTest']
+# Formula: HarvestOrdDate ~ Light * Herbivory * Lat + (1 | Block) 
+#  
+# REML criterion at convergence: 2686.124 
+#  
+# Random effects:
+#  Groups   Name        Variance Std.Dev.
+#  Block    (Intercept) 144.33   12.014  
+#  Residual              65.16    8.072  
+# Number of obs: 372, groups: Block, 32
+#  
+# Fixed effects:
+#                           Estimate Std. Error t value Pr(>|t|)    
+# (Intercept)               378.5104    19.4221  19.489  < 2e-16 ***
+# Lightshade                -37.7400    25.7904  -1.463 0.144243    
+# HerbivoryY                -28.8197    25.7831  -1.118 0.264406    
+# Lat                        -1.9936     0.5110  -3.902 0.000115 ***
+# Lightshade:HerbivoryY      26.7760    36.3188   0.737 0.461448    
+# Lightshade:Lat              1.3659     0.6777   2.016 0.044637 *  
+# HerbivoryY:Lat              0.8963     0.6774   1.323 0.186712    
+# Lightshade:HerbivoryY:Lat  -0.9295     0.9536  -0.975 0.330399    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+#  
+# Correlation of Fixed Effects:
+#             (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
+# Lightshade  -0.753                                          
+# HerbivoryY  -0.753  0.567                                   
+# Lat         -0.971  0.731  0.732                            
+# Lghtshd:HrY  0.535 -0.710 -0.710 -0.519                     
+# Lightshd:Lt  0.732 -0.971 -0.552 -0.754  0.689              
+# HerbvryY:Lt  0.733 -0.552 -0.971 -0.754  0.689  0.569       
+# Lghtsh:HY:L -0.520  0.690  0.690  0.536 -0.971 -0.711 -0.710
+
+``` 
+
+
+## Model: AVG TILLER LENGTH
+
+```{r}
 > m4<-lmer(Avg..tiller.length~Light*Herbivory*Lat+(1|Block))
 > Anova(m4)
 Analysis of Deviance Table (Type II Wald chisquare tests)
