@@ -62,6 +62,10 @@ A mixed-effects model to examine the interaction of light and herbivory treatmen
 
 ```{r anova date of first flower}
 
+bargraph.CI(pop_lat, FlowerOrdDate, group = Light, data = gh_data, legend = T,
+            ylab = "Flower Day", xlab = "Population latitude (1=highest)",
+            err.width = .05, y.leg = 300, ylim = c(245,300))
+
 m1 <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data, na.action=na.omit)
 Anova(m1)
 
