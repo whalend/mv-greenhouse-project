@@ -169,6 +169,10 @@ qqnorm(residuals(m3.2))
 
 ```
 
+**KS:** Not really sure what to do about this. Maybe do nothing because it is not obvious from data set what data point the outlier represents, so was likely not a data entry problem.
+
+**WD:** with my correction of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
+
 ```{r compare plots of m3 and m3.2 data}
 
 m3_latitude_plot <- ggplot(m3@frame, aes(Lat, HarvestOrdDate, color = Light)) +
@@ -208,18 +212,18 @@ m3.2_boxplot
 
 ```
  
-### KS: Not really sure what to do about this. Maybe do nothing because it is not obvious from data set what data point the outlier represents, so was likely not a data entry problem.
+Continue with comparing summaries of the model with the outlier to the model without the outlier.
 
-# WD: with my correction of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
+```{r m3 vs m3.2 models}
 
-```{r }
-
+Anova(m3)
 Anova(m3.2)
 
 step(m3)
 step(m3.2)
 
 summary(m3)
+summary(m3.2)
 
 ``` 
 
