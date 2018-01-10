@@ -6,11 +6,15 @@ output: html_document
 ---
 
 ```{r set options, echo=F}
+
 knitr::opts_chunk$set(fig.width = 7.5, fig.height = 7)
 knitr::opts_chunk$set(dpi = 300)
 knitr::opts_chunk$set(echo = F)
 knitr::opts_chunk$set(warning = F)
 knitr::opts_chunk$set(message = F)
+
+options(na.action = "na.fail")
+
 ```
 
 By request, I'm going to evaluate Kerry's analysis by first repeating what she did using her code. I copied over all lines from the "Analysis of full data set.docx" and will be editing things to flow in this Rmd report.
@@ -38,7 +42,8 @@ I (WD) will be making some revisions to this as I go.
 
 ```{r load libraries}
 
-library(lme4); library(car); library(sciplot); library(lmerTest)
+library(lme4); library(car); library(sciplot); library(lmerTest); 
+library(MuMIn)
 library(plyr); library(dplyr)
 library(ggplot2)
 
@@ -51,10 +56,14 @@ library(ggplot2)
 gh_data <- gh_data %>% 
   select(Block:Notes) %>%
   mutate(Light = as.factor(Light), Herbivory = as.factor(Herbivory),
-         `Pop#Lat` = as.factor(`Pop#Lat`), Block = as.factor(Block)) %>% 
+         `Pop#Lat` = (1/`Pop#Lat`), Block = as.factor(Block)) %>% 
   rename(pop_lat = `Pop#Lat`, pop_database = `Pop#Database`, 
          first_flower_date = `Date of First Flower`, seeds_per_SH = `Seeds/SH`,
          avg_tiller_length = `Avg. tiller length`, mv_biomass = `Mv biomass`)
+
+# Correct silly duplicate value
+gh_data$Lat[gh_data$Lat<33] <- 32.58217
+gh_data$Lat <- round(gh_data$Lat, digits = 5)
 
 no_herbivory <- filter(gh_data, Herbivory=="N")
 
@@ -70,7 +79,7 @@ avg_gh_data_light <- no_herbivory %>%
             seed_plant_ratio = avg_seed_mass/avg_mv_biomass)
 
 avg_gh_data <- gh_data %>% 
-  group_by(pop_lat, Herbivory, Light) %>% 
+  group_by(Lat, Herbivory, Light) %>% 
   summarise(avg_harvest_date = mean(HarvestOrdDate, na.rm = T),
             avg_flower_date = mean(FlowerOrdDate, na.rm = T),
             avg_seed_mass = mean(AvgSeedMass, na.rm = T),
@@ -83,18 +92,31 @@ avg_gh_data <- gh_data %>%
 ```
 
 
-## Model: DATE OF FIRST FLOWER
+## Model: Date of first flowering
 
-A mixed-effects model to examine the interaction of light and herbivory treatments with latitude of seedstock origin on the dat of first flowering. The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
+A mixed-effects model to examine the interaction of light and herbivory treatments with latitude of seedstock origin on the date of first flowering. The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
 
 ```{r day of first flower prelim figures}
 
-ggplot(avg_gh_data, 
-       aes(Light, avg_flower_date, color = as.numeric(pop_lat))) +
+lt_flower_plot <- ggplot(avg_gh_data, 
+       aes(Light, avg_flower_date, color = Lat)) +
   # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
+  geom_path(aes(group = Lat)) +
   geom_point(size = 2) +
   facet_wrap(~Herbivory) +
+  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+  scale_color_continuous(low = "green", high = "brown") +
+  # guides(linetype = guide_legend(override.aes = list(size = .7)),
+             # color = guide_legend(override.aes = list(linetype = 0))) +
+  # ylab("Day of Year") +
+  theme_bw()
+
+herb_flower_plot <- ggplot(avg_gh_data, 
+       aes(Herbivory, avg_flower_date, color = Lat)) +
+  # geom_boxplot()+
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  facet_wrap(~Light) +
   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
   scale_color_continuous(low = "green", high = "brown") +
   # guides(linetype = guide_legend(override.aes = list(size = .7)),
@@ -106,33 +128,46 @@ ggplot(avg_gh_data,
 
 ```{r anova date of first flower}
 
-bargraph.CI(pop_lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
-            ylab = "Flower Day", xlab = "Population latitude (1=highest)",
+bargraph.CI(Lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
+            ylab = "Flower Day", xlab = "Population latitude",
             err.width = .05, y.leg = 310, ylim = c(245,310))
 
-m1 <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data, na.action=na.omit)
+# summary(gh_data)
+gh_data_noNA <- filter(gh_data, is.na(FlowerOrdDate)=="FALSE")
+
+m1 <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data_noNA)
 Anova(m1)
 
 qqnorm(residuals(m1))
 plot(residuals(m1),fitted(m1))
 
 step(m1)
+dredge(refitML(m1))
+# plot(gh_data$Lat, gh_data$FlowerOrdDate)
+# FlowerReg <- lm(FlowerOrdDate~Lat, data = gh_data)
+# abline(FlowerReg)
 
-plot(gh_data$Lat, gh_data$FlowerOrdDate)
-FlowerReg <- lm(FlowerOrdDate~Lat, data = gh_data)
-abline(FlowerReg)
+ggplot(gh_data, aes(Lat, FlowerOrdDate)) +
+  geom_smooth(aes(color = Light), method = "lm", se = F) +
+  geom_point(aes(color = Light)) +
+  theme_classic() +
+  xlab("Latitude") +
+  ylab("Day of flowering")
 
-summary(m1)
+# summary(m1)
 
 ```
+
+Latitude of the origin population was the only signficant explanatory variable, however, a model that also included the Light treatment main effect was equally supported in AIC comparisons.
+
  
- 
-## Model: SEEDS PER SEED HEAD 
+## Model: Seeds per seed head
 
 ```{r anova of seeds per seed head}
 
 m2 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
 Anova(m2)
+summary(m2)
 
 qqnorm(residuals(m2))
 plot(residuals(m2),fitted(m2))
@@ -147,10 +182,12 @@ summary(m2)
 
 ggplot(gh_data, aes(Light, seeds_per_SH, fill = Herbivory)) +
   geom_boxplot(notch = F) +
+  scale_fill_discrete(h = c(120,60)) +
   theme_bw()
 
 ggplot(gh_data, aes(Lat, seeds_per_SH, color = Light, shape = Herbivory)) +
   geom_point() +
+  scale_color_discrete(h = c(50,110)) +
   geom_smooth(aes(linetype = Herbivory), method = "lm", se = T) +
   theme_bw() +
   ylab("Seeds per seed head")
@@ -159,7 +196,7 @@ ggplot(gh_data, aes(Lat, seeds_per_SH, color = Light, shape = Herbivory)) +
 
 
  
-## Model: HARVEST DATE (SENESCENCE)
+## Model: Harvest date (senescence)
 
 Fit a model to harvest date, which was based on plant sensecence, using light, herbivory, and latitude as predictor variables. Plots of the raw data suggest that plants sourced from higher latitudes and those in ambient light treatments senesce sooner than those from lower latitudes and shade treatments.
 
@@ -167,9 +204,9 @@ Fit a model to harvest date, which was based on plant sensecence, using light, h
 ```{r sensecence prelim figures}
 
 ggplot(avg_gh_data, 
-       aes(Light, avg_harvest_date, color = as.numeric(pop_lat))) +
+       aes(Light, avg_harvest_date, color = as.numeric(Lat))) +
   # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
+  geom_path(aes(group = Lat)) +
   geom_point(size = 2) +
   facet_wrap(~Herbivory) +
   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
@@ -206,17 +243,17 @@ plot(residuals(m3), fitted(m3))
 
 ```
 
-There was a major outlier that Kerry investigated, but ended up finding an additional outlier. 
+There was a major outlier that Kerry investigated, but ended up finding an additional outlier
 
-*KW*: I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). Here is what occurred:
+>*KS*: I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). Here is what occurred:
 
 ```{r assess senescence model residual outlier}
 
 which(residuals(m3) < -40)
-# [1] 316 (what Kerry reported)
+# [1] 316 (what KS reported)
 
-## I get 48 (and 46 for some reason, but 48 is the outlier value)
-residuals(m3)[residuals(m3) < -40]
+## I get 48 (and 46 for some reason??, but 48 is the outlier value)
+residuals(m3)[residuals(m3)< -40]
 
 summary(m3@frame)
 gh_data[48,]$HarvestOrdDate
@@ -235,6 +272,7 @@ qqnorm(residuals(m3.2))
 
 **WD:** with my correction of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
 
+
 ```{r compare plots of m3 and m3.2 data}
 
 m3_latitude_plot <- ggplot(m3@frame, aes(Lat, HarvestOrdDate, color = Light)) +
@@ -245,6 +283,7 @@ m3_latitude_plot <- ggplot(m3@frame, aes(Lat, HarvestOrdDate, color = Light)) +
              color = guide_legend(override.aes = list(linetype = 0))) +
   ylab("Day of Year") +
   theme_bw()
+
 m3.2_latitude_plot <- ggplot(m3.2@frame, aes(Lat, HarvestOrdDate, color = Light)) +
   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
   geom_point(aes(shape = Herbivory), size = 2) +
