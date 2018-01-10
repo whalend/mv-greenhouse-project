@@ -7,17 +7,17 @@ output: html_document
 
 ```{r set options, echo=F}
 
-knitr::opts_chunk$set(fig.width = 7.5, fig.height = 7)
+knitr::opts_chunk$set(fig.width = 7.5)
 knitr::opts_chunk$set(dpi = 300)
 knitr::opts_chunk$set(echo = F)
 knitr::opts_chunk$set(warning = F)
 knitr::opts_chunk$set(message = F)
 
-options(na.action = "na.fail")
+options(na.action = "na.fail")# global model setting for using multimodel inference 'dredge' function
 
 ```
 
-By request, I'm going to evaluate Kerry's analysis by first repeating what she did using her code. I copied over all lines from the "Analysis of full data set.docx" and will be editing things to flow in this Rmd report.
+By request, I'm going to evaluate Kerry's analysis by first repeating what she did using her code. I copied over all lines from the "Analysis of full data set.docx" and will be editing things in this report.
 
 
 # Some notes:
@@ -30,6 +30,12 @@ By request, I'm going to evaluate Kerry's analysis by first repeating what she d
     
 * 12 latitudes for the populations
 
+We need more detail on the methods, especially the induced herbivory part of the experiment. 
+
+ 1. How was the leaf area reduction "supplemented?" 
+ 
+ 2. Could the "herbivory" possibly just make it an additional light treatment, e.g. reduction of leaf area without inducing defense mechanisms?
+
 
 # Analysis by Kerry
 Analysis of full data set
@@ -38,7 +44,9 @@ Wednesday, August 5, 2015
  
 Data can be found in GH exp data and analysis.
 
-I (WD) will be making some revisions to this as I go.
+Kerry asked me to check over her models, so I (WD) will likely be making some additions and revisions to this as I go.
+
+A mixed-effects models were applied to examine the interaction of light and herbivory treatments with the latitude of seedstock origin on date of first flowering, seed production, senescence, tiller length, plant biomass, seed mass, and specific leaf area.
 
 ```{r load libraries}
 
@@ -46,6 +54,7 @@ library(lme4); library(car); library(sciplot); library(lmerTest);
 library(MuMIn)
 library(plyr); library(dplyr)
 library(ggplot2)
+library(knitr)
 
 ```
 
@@ -67,7 +76,7 @@ gh_data$Lat <- round(gh_data$Lat, digits = 5)
 
 no_herbivory <- filter(gh_data, Herbivory=="N")
 
-avg_gh_data_light <- no_herbivory %>% 
+avg_gh_data_no_herb <- no_herbivory %>% 
   group_by(pop_lat, Light) %>% 
   summarise(avg_harvest_date = mean(HarvestOrdDate, na.rm = T),
             avg_flower_date = mean(FlowerOrdDate, na.rm = T),
@@ -94,76 +103,71 @@ avg_gh_data <- gh_data %>%
 
 ## Model: Date of first flowering
 
-A mixed-effects model to examine the interaction of light and herbivory treatments with latitude of seedstock origin on the date of first flowering. The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
+ the date of first flowering. The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
 
 ```{r day of first flower prelim figures}
 
-lt_flower_plot <- ggplot(avg_gh_data, 
-       aes(Light, avg_flower_date, color = Lat)) +
-  # geom_boxplot()+
-  geom_path(aes(group = Lat)) +
-  geom_point(size = 2) +
-  facet_wrap(~Herbivory) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
-
-herb_flower_plot <- ggplot(avg_gh_data, 
-       aes(Herbivory, avg_flower_date, color = Lat)) +
-  # geom_boxplot()+
-  geom_path(aes(group = Lat)) +
-  geom_point(size = 2) +
-  facet_wrap(~Light) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
+ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Seeds per seed head") +
+  xlab("Latitude")
 
 ```
 
-```{r anova date of first flower}
+These plots indicate that flowering date is earlier at higher latitudes, and that herbivory and light treatments are not siginificant.
 
-bargraph.CI(Lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
-            ylab = "Flower Day", xlab = "Population latitude",
-            err.width = .05, y.leg = 310, ylim = c(245,310))
+```{r anova date of first flower, results='asis'}
+
+# bargraph.CI(Lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
+#             ylab = "Flower Day", xlab = "Population latitude",
+#             err.width = .05, y.leg = 310, ylim = c(245,310))
 
 # summary(gh_data)
 gh_data_noNA <- filter(gh_data, is.na(FlowerOrdDate)=="FALSE")
 
-m1 <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data_noNA)
-Anova(m1)
+flowering_mod <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data_noNA)
+Anova(flowering_mod)
 
-qqnorm(residuals(m1))
-plot(residuals(m1),fitted(m1))
+qqnorm(residuals(flowering_mod))
+plot(residuals(flowering_mod),fitted(flowering_mod))
 
-step(m1)
-dredge(refitML(m1))
+# step(flowering_mod)
+kable(dredge(refitML(flowering_mod)) %>% filter(delta < 7), caption = "Model comparison for ∂AICc < 7")
 # plot(gh_data$Lat, gh_data$FlowerOrdDate)
 # FlowerReg <- lm(FlowerOrdDate~Lat, data = gh_data)
 # abline(FlowerReg)
 
-ggplot(gh_data, aes(Lat, FlowerOrdDate)) +
-  geom_smooth(aes(color = Light), method = "lm", se = F) +
-  geom_point(aes(color = Light)) +
-  theme_classic() +
-  xlab("Latitude") +
-  ylab("Day of flowering")
-
-# summary(m1)
+# summary(flowering_mod)
+summary(update(flowering_mod, . ~ Lat + Light + (1|Block) ))
 
 ```
 
-Latitude of the origin population was the only signficant explanatory variable, however, a model that also included the Light treatment main effect was equally supported in AIC comparisons.
+Latitude of the origin population was the only signficant explanatory variable for the flowering date response, however, a model that also included the *Light* treatment main effect was equally supported in AIC comparisons. In general, flowering date was earlier for populations from from higher latitudes and in the shade treatments.
 
  
 ## Model: Seeds per seed head
 
-```{r anova of seeds per seed head}
+```{r plot seeds}
+
+# ggplot(gh_data, aes(Light, seeds_per_SH, fill = Herbivory)) +
+#   geom_boxplot(notch = F) +
+#   scale_fill_discrete(h = c(120,60)) +
+#   theme_bw()
+
+ggplot(gh_data, aes(Lat, seeds_per_SH, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  theme_bw() +
+  ylab("Seeds per seed head")
+
+```
+
+```{r anova of seed production}
 
 m2 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
 Anova(m2)
@@ -178,21 +182,6 @@ summary(m2)
 
 ```
 
-```{r plot seeds}
-
-ggplot(gh_data, aes(Light, seeds_per_SH, fill = Herbivory)) +
-  geom_boxplot(notch = F) +
-  scale_fill_discrete(h = c(120,60)) +
-  theme_bw()
-
-ggplot(gh_data, aes(Lat, seeds_per_SH, color = Light, shape = Herbivory)) +
-  geom_point() +
-  scale_color_discrete(h = c(50,110)) +
-  geom_smooth(aes(linetype = Herbivory), method = "lm", se = T) +
-  theme_bw() +
-  ylab("Seeds per seed head")
-
-```
 
 
  
