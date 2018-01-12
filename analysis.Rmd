@@ -781,4 +781,8 @@ summary(sla_mod2)
 
 ``` 
 
+<<<<<<< HEAD
 Specific leaf area was lower in plants from higher latitudes, but significantly greater in the shade, and slightly increased by herbivory treatments.
+=======
+Specific leaf area was lower in plants from higher latitudes, but significantly greater in the shade, and slightly increased by herbivory treatments.
+>>>>>>> b760dceaed2948023a0739e5a5771443d5c311fd
