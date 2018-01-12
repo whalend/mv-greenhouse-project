@@ -1,8 +1,11 @@
 ---
 title: "Analysis of Plasticity in Microstegium"
-author: "K.B. Stricker, Amy Kendig, W.W. Dillon, S.L. Flory"
-date: "11/27/2017"
-output: html_document
+author: "K.B. Stricker, W.W. Dillon, D.T. Hiatt, A.E. Kendig, S.L. Flory"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: yes
+  word_document: null
 ---
 
 ```{r set options, echo=F}
@@ -29,7 +32,7 @@ library(knitr)
 
 ```{r load data}
 
-(gh_data <- readxl::read_excel("GH exp data and analysis.xlsx", sheet = 1))
+gh_data <- readxl::read_excel("GH exp data and analysis.xlsx", sheet = 1)
 
 gh_data <- gh_data %>% 
   select(Block:Notes) %>%
@@ -69,14 +72,14 @@ avg_gh_data <- gh_data %>%
 
 ```
 
-An investigation into phenotypic plasticity of *Microstegium* across latitudinal gradients of light and herbivory.
+An investigation into phenotypic plasticity of *Microstegium* across a latitudinal gradient with experimental treatments of light and herbivory.
+
 
 # Methods
+
 Seeds were sourced from 12 populations spanning ~6 degrees of latitude (32.58º to 38.97º) in INSERT CONTINENT/COUNTRY and then grown in a common greenhouse experiment. There were 2-3 seeds per plot and they were exposed to either shade or ambient lighting for the duration of the experiment. The shade treatment decreased light by ~90%. 
 
 An herbivory treatment was implemented initially using fall army worms (FAW). Herbivory reduced overhead leaf area by 13.1% on average before FAW pupation. Because we were interested in a much more significant level of herbivory, we supplemented damage by FAW by removing most of the remaining leaf biomass by hand, resulting in a total reduction of 45.5% overhead leaf area.
-
-
 
 
 # Some notes:
@@ -98,14 +101,13 @@ We need more detail on the methods, especially the induced herbivory part of the
 
 I'm evaluating Kerry's analysis by first repeating what she did using her code and embedding figures.
 
-# Analysis by Kerry
+
+# Building off of analysis by Kerry
 Analysis of full data set
 Wednesday, August 5, 2015
 11:40 PM
  
-Data can be found in GH exp data and analysis.
-
-Kerry asked me to check over her models, so I (WD) will likely be making some additions and revisions to this as I go.
+Data can be found in the "GH exp data and analysis.xlsx" file.
 
 A mixed-effects models were applied to examine the interaction of light and herbivory treatments with the latitude of seedstock origin on date of first flowering, seed production, senescence, tiller length, plant biomass, seed mass, and specific leaf area.
 
@@ -635,156 +637,93 @@ gh_data$seed_plant_mass_ratio <- gh_data$AvgSeedMass/gh_data$mv_biomass
 ggplot(gh_data, aes(Lat, seed_plant_mass_ratio, color = Light)) +
   geom_point() +
   scale_color_discrete(h = c(50,110)) +
-  geom_smooth(aes(linetype = Herbivory), method = "lm", se = T) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
   # theme_bw() +
   theme_classic() +
   ylab("Seed mass : Plant mass ratio") +
   xlab("Latitude")
 
 # Seed mass:Plant mass ratio
-ggplot(avg_gh_data,
-       aes(Light, seed_plant_ratio, color = Lat)) +
-  # geom_boxplot()+
-  geom_path(aes(group = Lat)) +
-  geom_point(size = 2) +
-  facet_wrap(~Herbivory) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  ylab("Seed mass : Plant mass ratio") +
-  # theme_bw() +
-  theme_classic() +
-  theme(strip.background = element_blank())
+# ggplot(avg_gh_data,
+#        aes(Light, seed_plant_ratio, color = Lat)) +
+#   # geom_boxplot()+
+#   geom_path(aes(group = Lat)) +
+#   geom_point(size = 2) +
+#   facet_wrap(~Herbivory) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   ylab("Seed mass : Plant mass ratio") +
+#   # theme_bw() +
+#   theme_classic() +
+#   theme(strip.background = element_blank())
 
 ```
 
+The herbivory effect is confounded because plant mass was removed. I don't see a way to control for the amount of biomass removed by the herbivory treatment with these data. I didn't run a model for this response.
 
 
 ## Model: Specific leaf area
 
+1. How was average SLA calculated?
 
 ```{r prelim sla figures}
-ggplot(avg_gh_data_light, 
-       aes(Light, avg_sla, color = as.numeric(pop_lat))) +
-  # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
-  geom_point(size = 2) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
+
+ggplot(gh_data, aes(Lat, Avg.SLA, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Average SLA") +
+  xlab("Latitude")
+
+# ggplot(avg_gh_data, 
+#        aes(Light, avg_sla, color = Lat)) +
+#   # geom_boxplot()+
+#   geom_path(aes(group = Lat)) +
+#   geom_point(size = 2) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   # ylab("Day of Year") +
+#   theme_bw()
 
 ```
 
+Specific leaf area was greater in the shade, and slightly increased by herbivory treatments.
+
 ```{r model sla}
 
-m7<-lmer(Avg.SLA~Light*Herbivory*Lat+(1|Block))
-Anova(m7)
+gh_data_noNA <- filter(gh_data, is.na(Avg.SLA)=="FALSE")
 
-# Analysis of Deviance Table (Type II Wald chisquare tests)
-#  
-# Response: Avg.SLA
-#                        Chisq Df Pr(>Chisq)    
-# Light               155.6467  1  < 2.2e-16 ***
-# Herbivory             3.6365  1    0.05653 .  
-# Lat                  25.5650  1  4.277e-07 ***
-# Light:Herbivory       0.0019  1    0.96480    
-# Light:Lat             0.5230  1    0.46959    
-# Herbivory:Lat         0.1632  1    0.68625    
-# Light:Herbivory:Lat   1.5989  1    0.20606    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
+sla_mod <- lmer(Avg.SLA ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+Anova(sla_mod)
+## Main effects only, no interactions
 
-qqnorm(residuals(m7))
-plot(fitted(m7),residuals(m7))
- 
-step(m7)
- 
-# Random effects:
-#             Chi.sq Chi.DF elim.num p.value    
-# (1 | Block)   26.5      1        0   3e-07 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Fixed effects:
-#                       Sum Sq  Mean Sq NumDF DenDF  F.value elim.num   Pr(>F)    
-# Light               5.49e+05 5.49e+05     1  30.0 1.44e+02        0 5.33e-13 ***
-# Herbivory           1.30e+04 1.30e+04     1  29.1 3.78e+00        5   0.0616 .  
-# Lat                 9.24e+04 9.24e+04     1 344.3 2.56e+01        0 6.93e-07 ***
-# Light:Herbivory     6.23e+00 6.23e+00     1  28.1 1.95e-03        2   0.9651    
-# Light:Lat           1.66e+03 1.66e+03     1 343.2 4.60e-01        4   0.4980    
-# Herbivory:Lat       5.89e+02 5.89e+02     1 342.2 1.63e-01        3   0.6871    
-# Light:Herbivory:Lat 5.78e+03 5.78e+03     1 341.4 1.60e+00        1   0.2069    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Least squares means:
-#                Light Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light  ambient   1.0   437.38           8.19 30.0   53.40      421      454  <2e-16 ***
-# Light  shade     2.0   576.68           8.20 30.1   70.35      560      593  <2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-#  Differences of LSMEANS:
-#                     Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light ambient-shade     -139           11.6   30     -12     -163     -116  <2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Final model:
-# lme4::lmer(formula = Avg.SLA ~ Light + Lat + (1 | Block), REML = reml, 
-#     contrasts = l)
-# Warning messages:
-# 1: In model.matrix.default(mt, mf, contrasts) :
-#   variable 'Herbivory' is absent, its contrast will be ignored
-# 2: In model.matrix.default(mt, mf, contrasts) :
-#   variable 'Herbivory' is absent, its contrast will be ignored
-# 3: In model.matrix.default(mt, mf, contrasts) :
-#   variable 'Herbivory' is absent, its contrast will be ignored
+qqnorm(residuals(sla_mod))
+plot(sla_mod)
 
-summary(m7)
-# Linear mixed model fit by REML ['merModLmerTest']
-# Formula: Avg.SLA ~ Light * Herbivory * Lat + (1 | Block) 
-#  
-# REML criterion at convergence: 4144.55 
-#  
-# Random effects:
-#  Groups   Name        Variance Std.Dev.
-#  Block    (Intercept)  713.2   26.71   
-#  Residual             3612.3   60.10   
-# Number of obs: 377, groups: Block, 32
-#  
-# Fixed effects:
-#                           Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)                586.051    139.627   4.197 3.44e-05 ***
-# Lightshade                 402.142    186.046   2.162   0.0313 *  
-# HerbivoryY                 240.126    186.044   1.291   0.1977    
-# Lat                         -4.338      3.764  -1.153   0.2499    
-# Lightshade:HerbivoryY     -329.769    262.577  -1.256   0.2100    
-# Lightshade:Lat              -7.049      5.012  -1.406   0.1605    
-# HerbivoryY:Lat              -5.920      5.012  -1.181   0.2384    
-# Lightshade:HerbivoryY:Lat    8.943      7.072   1.264   0.2069    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Correlation of Fixed Effects:
-#             (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
-# Lightshade  -0.750                                          
-# HerbivoryY  -0.751  0.563                                   
-# Lat         -0.996  0.748  0.748                            
-# Lghtshd:HrY  0.532 -0.709 -0.709 -0.530                     
-# Lightshd:Lt  0.748 -0.996 -0.561 -0.751  0.706              
-# HerbvryY:Lt  0.748 -0.561 -0.996 -0.751  0.706  0.564       
-# Lghtsh:HY:L -0.530  0.706  0.706  0.532 -0.996 -0.709 -0.709
+step(sla_mod)
+filter(dredge(refitML(sla_mod)), delta < 7)
+
+## If any of the bars are completely above or below the zero line then the grouping factor account for a significant amount of the variation.
+# e <- rstandard(lm(Avg.SLA ~ Light*Herbivory*Lat, data = gh_data_noNA))
+# boxplot(e ~ Block, data = gh_data_noNA)
+# abline(0,0); axis(2)
+
+sla_mod2 <- lmer(Avg.SLA ~ Lat + Light + Herbivory + (1|Block), data = gh_data_noNA)
+summary(sla_mod2)
+
 ``` 
 
-So basically, what's going on here is that there is a positive relationship between latitude and herbivory and latitude when plants grown under ambient light and herbivory. Otherwise the lines show a negative/no relationship. Of course, seeds/seed head number is reduced overall when light reduced.
+
+> **KS**: So basically, what's going on here is that there is a positive relationship between latitude and herbivory and latitude when plants grown under ambient light and herbivory. Otherwise the lines show a negative/no relationship. Of course, seeds/seed head number is reduced overall when light reduced.
  
-None of this seems right…need to figure out how to deal with weird residual.
+> None of this seems right…need to figure out how to deal with weird residual.
  
-Diagnostics for sqrt transform look best, but conclusions the same whether transformed or not.
+> Diagnostics for sqrt transform look best, but conclusions the same whether transformed or not.
  
-Also looked at log transform for these data, but sqrt diagnostics looked better.
+> Also looked at log transform for these data, but sqrt diagnostics looked better.
