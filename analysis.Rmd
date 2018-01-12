@@ -117,6 +117,7 @@ The date of first flowering is ordered by day of year, so larger numbers indicat
 
 What is the biological significance of flowering date?
 
+### Day of firest flowering figure
 ```{r day of first flower prelim figures}
 
 ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
@@ -141,6 +142,7 @@ ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
 
 These figures indicate that flowering date is earlier at higher latitudes, and that herbivory and light treatments are not siginificant.
 
+### Day of first flower model
 ```{r date of first flower model}
 
 # bargraph.CI(Lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
@@ -151,13 +153,17 @@ These figures indicate that flowering date is earlier at higher latitudes, and t
 gh_data_noNA <- filter(gh_data, is.na(FlowerOrdDate)=="FALSE")
 
 flowering_mod <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data_noNA)
-qqnorm(residuals(flowering_mod))
-plot(flowering_mod)
+# qqnorm(residuals(flowering_mod))
+# plot(flowering_mod)
 
 Anova(flowering_mod)
 
 step(flowering_mod)# keep block effect
 dredge(refitML(flowering_mod)) %>% filter(delta < 7)
+```
+
+### Day of first flower: final model
+```{r first flower final model}
 
 flowering_mod2 <- lmer(FlowerOrdDate ~ Lat + (1|Block), 
                       data = gh_data_noNA)
@@ -174,6 +180,7 @@ Latitude of the origin population was the only signficant explanatory variable f
 
 1. What is the relationship between harvest date and senescence?
 
+### Senescence (harvest date) figure
 ```{r senescence prelim figure}
 
 ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light)) +
@@ -216,6 +223,7 @@ ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light)) +
 
 Plotting the raw data suggests that plants sourced from higher latitudes and those in ambient light treatments senesced sooner than those from lower latitudes and in shade treatments.
 
+### Senescence model
 ```{r senescence model}
 
 # summary(gh_data)
@@ -225,8 +233,8 @@ gh_data_noNA <- filter(gh_data, is.na(HarvestOrdDate)=="FALSE")
 
 senescence_mod <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
 
-qqnorm(residuals(senescence_mod))
-plot(residuals(senescence_mod), fitted(senescence_mod))
+# qqnorm(residuals(senescence_mod))
+plot(senescence_mod)
 
 # Anova(senescence_mod)
 
@@ -240,6 +248,7 @@ It looks like the outlier affects the normality more than the residual variance,
 
 **WD:** with my correction (I think) of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
 
+#### Assess and correct outlier
 ```{r assess senescence model residual outlier}
 
 which(residuals(senescence_mod) < -40)
@@ -257,16 +266,16 @@ senescence_mod.2 <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block),
 
 # summary(senescence_mod.2@frame)
 # plot(senescence_mod.2)
-plot(fitted(senescence_mod.2),residuals(senescence_mod.2))
-qqnorm(residuals(senescence_mod.2))
-
-```
-
-```{r model comparison}
+# plot(fitted(senescence_mod.2),residuals(senescence_mod.2))
+# qqnorm(residuals(senescence_mod.2))
 
 Anova(senescence_mod.2)
 step(senescence_mod.2)# keep block
 filter(dredge(refitML(senescence_mod.2)), delta < 7)
+```
+
+### Senescence: final model
+```{r senescence final model}
 
 senescence_mod.2 <- lmer(HarvestOrdDate ~ Lat + Light + (1|Block), 
                          data = gh_data_noNA)
@@ -339,6 +348,7 @@ summary(senescence_mod.2)
 
 1. How many tillers were measured to calculate the average for each plant?
 
+### Tiller length figure
 ```{r prelim plots avg tiller length}
 
 ggplot(gh_data, aes(Lat, avg_tiller_length, color = Light)) +
@@ -375,16 +385,16 @@ ggplot(gh_data, aes(Lat, avg_tiller_length, color = Light)) +
 
 ```
 
-Tiller lengths were shorter in populations from higher latitudes. Tillers lengths were also shorter in herbivory treatments, but especially in the shaded herbivory treatment group. 
 
+### Tiller length model
 ```{r avg tiller length model}
 
 gh_data_noNA <- filter(gh_data, is.na(avg_tiller_length)=="FALSE")
 
 tiller_mod <- lmer(avg_tiller_length ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
 
-qqnorm(residuals(tiller_mod))
-plot(tiller_mod)
+# qqnorm(residuals(tiller_mod))
+# plot(tiller_mod)
 # plot(fitted(tiller_mod),residuals(tiller_mod))
 Anova(tiller_mod)
 ## Anova indicates only the main effects are statistically significant
@@ -411,6 +421,11 @@ filter(dredge(refitML(tiller_mod)), delta < 7)
 # tiller_mod.1<-lmer(avg_tiller_length ~ Herbivory + Lat*Light + (1|Block), data = gh_data_noNA)
 # plot(tiller_mod.1)
 # summary(tiller_mod.1)
+```
+
+### Tiller length: final model
+
+```{r tiller length final model}
 
 tillermod_2 <- lmer(avg_tiller_length ~ Lat + Light + Herbivory + (1|Block), data = gh_data_noNA)
 summary(tillermod_2)
@@ -418,10 +433,14 @@ summary(tillermod_2)
 
 ```
 
+Tiller lengths were shorter in populations from higher latitudes. Tillers lengths were also shorter in herbivory treatments, but especially in the shaded herbivory treatment group.
+
 
 ## Model: Plant biomass
 
 Is this aboveground or whole plant (above and below)?
+
+### Plant biomass figure
 
 ```{r mv biomass prelim figures}
 
@@ -450,19 +469,21 @@ ggplot(gh_data, aes(Lat, mv_biomass, color = Light)) +
 
 Main effects of light and herbivory are apparent (and interaction?), with perhaps a weak main effect of latitude.
 
+### Plant biomass model
+
 ```{r mv biomass model}
 
 gh_data_noNA <- filter(gh_data, is.na(mv_biomass)=="FALSE")
 
 mv_biomass_mod <- lmer(mv_biomass ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
-qqnorm(residuals(mv_biomass_mod))
+# qqnorm(residuals(mv_biomass_mod))
 plot(mv_biomass_mod)
 ## Major heteroskedacity in the residuals
 
 hist(log1p(gh_data_noNA$mv_biomass))
 hist(sqrt(gh_data_noNA$mv_biomass))
 
-plot(update(mv_biomass_mod, log1p(mv_biomass) ~ .), main = "ln+1 transformed")
+plot(update(mv_biomass_mod, log1p(mv_biomass) ~ .), main = "biomass log-transformed")
 # plot(update(mv_biomass_mod, sqrt(mv_biomass) ~ .), main = "square-rooted")
 ## Log transformation results in better residuals
 
@@ -471,9 +492,16 @@ Anova(mv_biomass_mod2)
 ## After transforming response variable only main effects significant
 
 filter(dredge(refitML(mv_biomass_mod2)), delta < 7)
+```
+
+I log-transformed the response variable to remove the heteroscedasticity in the residuals seen in the model of the untransformed data.
+
+### Plant biomass: final model
+
+```{r biomass final model}
 
 mv_biomass_mod2 <- lmer(log(mv_biomass) ~ Lat + Light + Herbivory + (1|Block), data = gh_data_noNA)
-plot(mv_biomass_mod2)
+# plot(mv_biomass_mod2)
 
 summary(mv_biomass_mod2)
 # confint(mv_biomass_mod2)[c(-1,-2),]
@@ -502,7 +530,9 @@ There was substantial heterskedacity in the residuals of the raw biomass data, s
 
 2. Was the number of seeds head counted per plant fixed?
 
-3. What is the biological intepretation?
+3. What is the biological significance?
+
+### Seeds production figure
 
 ```{r plot seeds}
 
@@ -539,11 +569,14 @@ This figure suggests that the herbivory treatment had different effects under am
 
 * The main effects of herbivory and shade reduced the number of seeds per seed head.
 
-There are `r n_distinct(filter(gh_data, is.na(seeds_per_SH)))` missing values (`NA`) for seeds/seed-head - is this because no seed heads were produced? It also raises the questions of whether these should be treated as true zeroes, i.e. zero seeds were produced, or excluding them as "missing" is the appropriate approach.
+There are `r n_distinct(filter(gh_data, is.na(seeds_per_SH)))` missing values (`NA`) for seeds/seed-head - is this because no seed heads were produced or early plant mortality? It could raise the question of whether these should be treated as true zeroes, i.e. zero seeds were produced, or excluding them as "missing" is the appropriate approach.
 
-Using zeroes or excluding these observations as missing has no effect on the overall relationship, but it does change the coefficient estimate for the herbivory effect by seven. I'm don't think this is a biologically meaningful difference, but it may be more biologically accurate if it is reasonable to think that the light or herbivory treatments may have prevented seeds from being produced. 
+I ran models both ways, and using zeroes or excluding these observations as missing has no effect on the overall relationship, but it does change the coefficient estimate for the herbivory effect by seven. I don't think this is a biologically meaningful difference, but it may be more biologically accurate if it is reasonable to think that the light or herbivory treatments may have prevented seeds from being produced. 
 
 These results are with the `NA` values excluded because that's what was done previously.
+
+
+### Seed production model
 
 ```{r seed production model}
 
@@ -556,12 +589,20 @@ seeds_mod1 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_dat
 seeds_mod2 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
 
 # dredge(refitML(seeds_mod1))
-dredge(refitML(seeds_mod2))
+filter(dredge(refitML(seeds_mod2)), delta < 7)
+
+```
+
+### Seed production: final model
+```{r seed production final model}
 
 # summary(update(seeds_mod1, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))
-summary(update(seeds_mod2, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))
+seeds_mod2 <- lmer(seeds_per_SH ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block), data = gh_data_noNA)
+# plot(seeds_mod2)
 
-kable(confint.merMod(update(seeds_mod2, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))[c(-1, -2),], caption = "95% confidence intervals for coefficient estimates.")
+summary(seeds_mod2)
+
+# kable(confint.merMod(update(seeds_mod2, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))[c(-1, -2),], caption = "95% confidence intervals for coefficient estimates.")
 
 ```
 
@@ -581,6 +622,8 @@ The main effects of latitude, herbivory, and light were statistically significan
 1. How was this average seed mass calculated?
 
 2. What is the biological interpretation of this vs. seeds per seed head? How are they different?
+
+### Seed mass figure
 
 ```{r seed mass prelim figures}
 
@@ -610,7 +653,7 @@ ggplot(gh_data, aes(Lat, AvgSeedMass, color = Light)) +
 
 It looks like main effects of latitude and light are likely to be significant, with seed mass lower at higher latitudes, but greater in the shade.
 
-Is it interesting that average seed mass was greater in the shade? Shade results in fewer but also more massive seeds? 
+### Seed mass model
 
 ```{seed mass model} 
 
@@ -620,20 +663,27 @@ Is it interesting that average seed mass was greater in the shade? Shade results
 gh_data_noNA <- filter(gh_data, is.na(AvgSeedMass)=="FALSE")
 
 seed_mass_mod <- lmer(AvgSeedMass ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
-qqnorm(residuals(seed_mass_mod))
+# qqnorm(residuals(seed_mass_mod))
 plot(seed_mass_mod)
 
 Anova(seed_mass_mod)
-# step(seed_mass_mod)
 ## Light, Latitude, Light:Lat interaction significant
+step(seed_mass_mod)# keep block
+```
 
-summary(seed_mass_mod)
+### Seed mass: final model
 
+```{r seed mass final model}
+seed_mass_mod2 <- lmer(AvgSeedMass ~ Lat + Light + Light:Lat + (1|Block), 
+                       data = gh_data_noNA)
+# plot(seed_mass_mod2)
+summary(seed_mass_mod2)
 
 ```
  
+Shaded plants had greater average seed mass. Plants originating from higher latitudes had lower average seed mass, and this effect was stronger in the shade treatment.
 
-## Model: Seed mass/plant mass ratio
+## Seed mass/plant mass ratio
 
 Drew suggested looking at the seed mass to plant mass ratio (seed mass divided by plant mass)
 
@@ -675,6 +725,8 @@ The herbivory effect is confounded because plant mass was removed. I don't see a
 
 1. How was average SLA calculated?
 
+### Specific leaf area figure
+
 ```{r prelim sla figures}
 
 ggplot(gh_data, aes(Lat, Avg.SLA, color = Light)) +
@@ -700,37 +752,33 @@ ggplot(gh_data, aes(Lat, Avg.SLA, color = Light)) +
 
 ```
 
-Specific leaf area was greater in the shade, and slightly increased by herbivory treatments.
-
-```{r model sla}
+### SLA model
+```{r sla model}
 
 gh_data_noNA <- filter(gh_data, is.na(Avg.SLA)=="FALSE")
 
 sla_mod <- lmer(Avg.SLA ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+# qqnorm(residuals(sla_mod))
+# plot(sla_mod)
+
 Anova(sla_mod)
 ## Main effects only, no interactions
-
-qqnorm(residuals(sla_mod))
-plot(sla_mod)
-
-step(sla_mod)
+step(sla_mod)# keep block effect
 filter(dredge(refitML(sla_mod)), delta < 7)
 
 ## If any of the bars are completely above or below the zero line then the grouping factor account for a significant amount of the variation.
 # e <- rstandard(lm(Avg.SLA ~ Light*Herbivory*Lat, data = gh_data_noNA))
 # boxplot(e ~ Block, data = gh_data_noNA)
 # abline(0,0); axis(2)
+```
+
+### SLA: final model
+
+```{r sla final model}
 
 sla_mod2 <- lmer(Avg.SLA ~ Lat + Light + Herbivory + (1|Block), data = gh_data_noNA)
 summary(sla_mod2)
 
 ``` 
 
-
-> **KS**: So basically, what's going on here is that there is a positive relationship between latitude and herbivory and latitude when plants grown under ambient light and herbivory. Otherwise the lines show a negative/no relationship. Of course, seeds/seed head number is reduced overall when light reduced.
- 
-> None of this seems right…need to figure out how to deal with weird residual.
- 
-> Diagnostics for sqrt transform look best, but conclusions the same whether transformed or not.
- 
-> Also looked at log transform for these data, but sqrt diagnostics looked better.
+Specific leaf area was lower in plants from higher latitudes, but significantly greater in the shade, and slightly increased by herbivory treatments.
