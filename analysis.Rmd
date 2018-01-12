@@ -17,37 +17,6 @@ options(na.action = "na.fail")# global model setting for using multimodel infere
 
 ```
 
-By request, I'm going to evaluate Kerry's analysis by first repeating what she did using her code. I copied over all lines from the "Analysis of full data set.docx" and will be editing things in this report.
-
-
-# Some notes:
-
-* Abiotic (shade) and biotic (herbivory) treatments were nested
-
-* Herbivory by fall army worm didn't reduce overhead leaf area enough (mean = 13.1%); supplemented to have total reduction of 45.5% overhead leaf area. 
-     
-    - These are conservative estimates because they don't account for the loss of biomass under the topmost level of vegetation.
-    
-* 12 latitudes for the populations
-
-We need more detail on the methods, especially the induced herbivory part of the experiment. 
-
- 1. How was the leaf area reduction "supplemented?" 
- 
- 2. Could the "herbivory" possibly just make it an additional light treatment, e.g. reduction of leaf area without inducing defense mechanisms?
-
-
-# Analysis by Kerry
-Analysis of full data set
-Wednesday, August 5, 2015
-11:40 PM
- 
-Data can be found in GH exp data and analysis.
-
-Kerry asked me to check over her models, so I (WD) will likely be making some additions and revisions to this as I go.
-
-A mixed-effects models were applied to examine the interaction of light and herbivory treatments with the latitude of seedstock origin on date of first flowering, seed production, senescence, tiller length, plant biomass, seed mass, and specific leaf area.
-
 ```{r load libraries}
 
 library(lme4); library(car); library(sciplot); library(lmerTest); 
@@ -64,8 +33,8 @@ library(knitr)
 
 gh_data <- gh_data %>% 
   select(Block:Notes) %>%
-  mutate(Light = as.factor(Light), Herbivory = as.factor(Herbivory),
-         `Pop#Lat` = (1/`Pop#Lat`), Block = as.factor(Block)) %>% 
+  mutate(Light = as.factor(Light), Herbivory = as.factor(Herbivory), 
+         Block = as.factor(Block)) %>% 
   rename(pop_lat = `Pop#Lat`, pop_database = `Pop#Database`, 
          first_flower_date = `Date of First Flower`, seeds_per_SH = `Seeds/SH`,
          avg_tiller_length = `Avg. tiller length`, mv_biomass = `Mv biomass`)
@@ -96,14 +65,55 @@ avg_gh_data <- gh_data %>%
             avg_seeds_per_sh = mean(seeds_per_SH, na.rm = T),
             avg_mv_biomass = mean(mv_biomass, na.rm = T),
             avg_sla = mean(Avg.SLA, na.rm = T),
-            seed_plant_ratio = avg_seed_mass/avg_mv_biomass)
+            seed_plant_ratio = mean(AvgSeedMass/mv_biomass, na.rm = T))
 
 ```
 
+An investigation into phenotypic plasticity of *Microstegium* across latitudinal gradients of light and herbivory.
+
+# Methods
+Seeds were sourced from 12 populations spanning ~6 degrees of latitude (32.58º to 38.97º) in INSERT CONTINENT/COUNTRY and then grown in a common greenhouse experiment. There were 2-3 seeds per plot and they were exposed to either shade or ambient lighting for the duration of the experiment. The shade treatment decreased light by ~90%. 
+
+An herbivory treatment was implemented initially using fall army worms (FAW). Herbivory reduced overhead leaf area by 13.1% on average before FAW pupation. Because we were interested in a much more significant level of herbivory, we supplemented damage by FAW by removing most of the remaining leaf biomass by hand, resulting in a total reduction of 45.5% overhead leaf area.
+
+
+
+
+# Some notes:
+
+* Abiotic (shade) and biotic (herbivory) treatments were nested
+
+* Herbivory by fall army worm didn't reduce overhead leaf area enough (mean = 13.1%); supplemented to have total reduction of 45.5% overhead leaf area. 
+     
+    - These are conservative estimates because they don't account for the loss of biomass under the topmost level of vegetation.
+    
+* 12 latitudes for the populations
+
+We need more detail on the methods, especially the induced herbivory part of the experiment. 
+
+ 1. How was the leaf area reduction "supplemented?" 
+ 
+ 2. Could the "herbivory" possibly just make it an additional light treatment, e.g. reduction of leaf area without inducing defense mechanisms?
+
+
+I'm evaluating Kerry's analysis by first repeating what she did using her code and embedding figures.
+
+# Analysis by Kerry
+Analysis of full data set
+Wednesday, August 5, 2015
+11:40 PM
+ 
+Data can be found in GH exp data and analysis.
+
+Kerry asked me to check over her models, so I (WD) will likely be making some additions and revisions to this as I go.
+
+A mixed-effects models were applied to examine the interaction of light and herbivory treatments with the latitude of seedstock origin on date of first flowering, seed production, senescence, tiller length, plant biomass, seed mass, and specific leaf area.
 
 ## Model: Date of first flowering
 
- the date of first flowering. The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
+The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
+
+What is the biological interpretation?
 
 ```{r day of first flower prelim figures}
 
@@ -113,12 +123,21 @@ ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
   # theme_bw() +
   theme_classic() +
-  ylab("Seeds per seed head") +
+  ylab("Day of first flowering") +
   xlab("Latitude")
+
+# ggplot(gh_data, aes(Long, FlowerOrdDate, color = Light)) +
+#   geom_point() +
+#   scale_color_discrete(h = c(50,110)) +
+#   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+#   # theme_bw() +
+#   theme_classic() +
+#   ylab("Day of first flowering") +
+#   xlab("Longitude")
 
 ```
 
-These plots indicate that flowering date is earlier at higher latitudes, and that herbivory and light treatments are not siginificant.
+These figures indicate that flowering date is earlier at higher latitudes, and that herbivory and light treatments are not siginificant.
 
 ```{r anova date of first flower, results='asis'}
 
@@ -136,7 +155,7 @@ qqnorm(residuals(flowering_mod))
 plot(residuals(flowering_mod),fitted(flowering_mod))
 
 # step(flowering_mod)
-kable(dredge(refitML(flowering_mod)) %>% filter(delta < 7), caption = "Model comparison for ∂AICc < 7")
+kable(dredge(refitML(flowering_mod)) %>% filter(delta < 7), caption = "Models where ∆AICc < 7 compared to best model")
 # plot(gh_data$Lat, gh_data$FlowerOrdDate)
 # FlowerReg <- lm(FlowerOrdDate~Lat, data = gh_data)
 # abline(FlowerReg)
@@ -144,12 +163,337 @@ kable(dredge(refitML(flowering_mod)) %>% filter(delta < 7), caption = "Model com
 # summary(flowering_mod)
 summary(update(flowering_mod, . ~ Lat + Light + (1|Block) ))
 
+confint(update(flowering_mod, . ~ Lat + Light + (1|Block) ))
+
 ```
 
 Latitude of the origin population was the only signficant explanatory variable for the flowering date response, however, a model that also included the *Light* treatment main effect was equally supported in AIC comparisons. In general, flowering date was earlier for populations from from higher latitudes and in the shade treatments.
 
  
+## Model: Harvest date (senescence)
+
+1. What is the relationship between harvest date and senescence?
+
+```{r senescence prelim figure}
+
+ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Day of harvest") +
+  xlab("Latitude")
+
+# ggplot(avg_gh_data, 
+#        aes(Light, avg_harvest_date, color = as.numeric(Lat))) +
+#   # geom_boxplot()+
+#   geom_path(aes(group = Lat)) +
+#   geom_point(size = 2) +
+#   facet_wrap(~Herbivory) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   # ylab("Day of Year") +
+#   theme_bw()
+
+# ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light, shape = Herbivory)) +
+#   geom_point() +
+#   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+#   scale_color_discrete(h = c(60,120)) +
+#   guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              color = guide_legend(override.aes = list(linetype = 0))) +
+#   ylab("Day of Year") +
+#   theme_bw()
+
+# ggplot(gh_data, aes(Light, HarvestOrdDate, fill = Herbivory)) +
+#   geom_boxplot(notch = F) +
+#   scale_fill_discrete(h = c(60,120)) +
+#   theme_bw()
+
+```
+
+Plotting the raw data suggests that plants sourced from higher latitudes and those in ambient light treatments senesced sooner than those from lower latitudes and in shade treatments.
+
+```{r senescence model}
+
+# summary(gh_data)
+gh_data_noNA <- filter(gh_data, is.na(HarvestOrdDate)=="FALSE")
+
+# gh_data$HarvestOrdDate[is.na(gh_data$HarvestOrdDate)] <- 0
+
+senescence_mod <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+
+qqnorm(residuals(senescence_mod))
+plot(residuals(senescence_mod), fitted(senescence_mod))
+
+# Anova(senescence_mod)
+
+```
+
+There was a major outlier that Kerry investigated, but ended up finding an additional outlier
+
+>*KS*: I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). Here is what occurred:
+
+```{r assess senescence model residual outlier}
+
+which(residuals(senescence_mod) < -40)
+# [1] 316 (what KS reported)
+## I get 46 (twice for some reason??)
+
+residuals(senescence_mod)[residuals(senescence_mod) < -40]
+
+# summary(senescence_mod@frame)
+# gh_data[46,]$HarvestOrdDate
+
+gh_data_noNA <- gh_data_noNA[-46,]
+senescence_mod.2 <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), 
+             data = gh_data_noNA) 
+
+# summary(senescence_mod.2@frame)
+# plot(senescence_mod.2)
+plot(fitted(senescence_mod.2),residuals(senescence_mod.2))
+qqnorm(residuals(senescence_mod.2))
+
+```
+
+**KS:** Not really sure what to do about this. Maybe do nothing because it is not obvious from data set what data point the outlier represents, so was likely not a data entry problem.
+
+**WD:** with my correction of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
+
+```{r model comparison}
+
+Anova(senescence_mod.2)
+filter(dredge(refitML(senescence_mod.2)), delta < 7)
+
+summary(update(senescence_mod.2, . ~ Lat + Light + (1|Block)))
+
+confint(update(senescence_mod.2, . ~ Lat + Light + (1|Block)))[c(-1,-2),]
+
+```
+
+The strongest effects are from latitude and the light treatment, but the model including the interaction between latitude and light is equally supported by the data. Models with the herbivory main effect, or only main effects (no interaction terms), or only latitude, also have some support. Here I reported results from the model with only main effects of latitude and light. At a strict p=.05 level, latitdue is the only significant explanatory variable.
+
+
+```{r compare plots of senescence_mod and senescence_mod.2 data, eval=F }
+
+senescence_mod_latitude_plot <- ggplot(senescence_mod@frame, aes(Lat, HarvestOrdDate, color = Light)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  geom_point(aes(shape = Herbivory), size = 2) +
+  scale_color_discrete(h = c(60,120)) +
+  guides(linetype = guide_legend(override.aes = list(size = .7)),
+             color = guide_legend(override.aes = list(linetype = 0))) +
+  ylab("Day of Year") +
+  xlab("Latitude") +
+  theme_classic()
+
+senescence_mod.2_latitude_plot <- ggplot(senescence_mod.2@frame, aes(Lat, HarvestOrdDate, color = Light)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  geom_point(aes(shape = Herbivory), size = 2) +
+  scale_color_discrete(h = c(60,120)) +
+  guides(linetype = guide_legend(override.aes = list(size = .7)),
+             color = guide_legend(override.aes = list(linetype = 0))) +
+  ylab("Day of Year") +
+  xlab("Latitude") +
+  theme_classic()
+
+senescence_mod_boxplot <- ggplot(senescence_mod@frame, aes(Light, HarvestOrdDate, fill = Herbivory)) +
+  geom_boxplot(notch = F) +
+  scale_fill_discrete(h = c(60,120)) +
+  ylab("Day of Year") +
+  theme_bw()
+senescence_mod.2_boxplot <- ggplot(senescence_mod.2@frame, aes(Light, HarvestOrdDate, fill = Herbivory)) +
+  geom_boxplot(notch = F) +
+  scale_fill_discrete(h = c(60,120)) +
+  ylab("Day of Year") +
+  theme_bw()
+
+senescence_mod_latitude_plot
+senescence_mod.2_latitude_plot +
+  ggtitle("outlier observation removed")
+
+senescence_mod_boxplot
+senescence_mod.2_boxplot
+
+```
+
+```{r senescence_mod vs senescence_mod.2 models, eval=F}
+
+Anova(senescence_mod)
+Anova(senescence_mod.2)
+
+step(senescence_mod)
+step(senescence_mod.2)
+
+summary(senescence_mod)
+summary(senescence_mod.2)
+
+``` 
+
+
+## Model: Tiller length
+
+1. How many tillers were measured to calculate the average for each plant?
+
+```{r prelim plots avg tiller length}
+
+ggplot(gh_data, aes(Lat, avg_tiller_length, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Average tiller length (cm)") +
+  xlab("Latitude")
+
+# ggplot(gh_data, aes(Light, avg_tiller_length, fill = Herbivory)) +
+#   geom_boxplot(notch = T) +
+#   scale_fill_discrete(h = c(60,120)) +
+#   ylab("Tiller length (cm)") +
+#   theme_classic()
+  # theme_bw()
+
+# tiller_length <- gh_data %>% 
+#   group_by(pop_lat, Light) %>% 
+#   summarise(avg_tiller_length = mean(avg_tiller_length, na.rm = T),
+#             avg_seed_mass = mean(AvgSeedMass, na.rm = T))
+
+# ggplot(avg_gh_data_light, 
+#        aes(Light, avg_tiller_length, color = pop_lat)) +
+#   geom_path(aes(group = pop_lat)) +
+#   geom_point(size = 2) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   # ylab("Day of Year") +
+#   theme_classic()
+
+```
+
+Tiller lengths were shorter in populations from higher latitudes. Tillers lengths were also shorter in herbivory treatments, but especially in the shaded herbivory treatment group. 
+
+```{r avg tiller length model}
+
+gh_data_noNA <- filter(gh_data, is.na(avg_tiller_length)=="FALSE")
+
+tiller_mod <- lmer(avg_tiller_length ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+
+qqnorm(residuals(tiller_mod))
+plot(tiller_mod)
+# plot(fitted(tiller_mod),residuals(tiller_mod))
+Anova(tiller_mod)
+## Anova indicates only the main effects are statistically significant
+filter(dredge(refitML(tiller_mod)), delta < 7)
+## Equal support for main effects only and main effects plus Herb:Light interaction
+
+# # log transformation of average tiller length
+# tiller_mod.2<-lmer(log(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
+# qqnorm(residuals(tiller_mod.2))
+# plot(tiller_mod.2)
+# # plot(fitted(tiller_mod.2),residuals(tiller_mod.2))
+# summary(tiller_mod.2)
+# # Anova(tiller_mod.2)
+
+# # square root transformation of average tiller length
+# tiller_mod.3<-lmer(sqrt(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
+# qqnorm(residuals(tiller_mod.3))
+# 
+# # plot(fitted(tiller_mod.3),residuals(tiller_mod.3))
+# summary(tiller_mod.3)
+# # Anova(tiller_mod.3)
+
+# tiller_mod.1<-lmer(avg_tiller_length ~ Herbivory + Lat*Light + (1|Block), data = gh_data_noNA)
+# plot(tiller_mod.1)
+# summary(tiller_mod.1)
+# 
+# 
+# AICc(tiller_mod, tiller_mod.2, tiller_mod.3, tiller_mod.1)
+# BIC(tiller_mod, tiller_mod.2, tiller_mod.3, tiller_mod.1)
+# step(tiller_mod.3)
+
+summary(update(tiller_mod, . ~ Lat + Light + Herbivory + (1|Block)))
+confint(update(tiller_mod, . ~ Lat + Light + Herbivory + (1|Block)))[c(-1,-2),]
+
+```
+
+
+## Model: Plant biomass
+
+Is this aboveground or whole plant (above and below)?
+
+```{r mv biomass prelim figures}
+
+ggplot(gh_data, aes(Lat, mv_biomass, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Plant biomass (g)") +
+  xlab("Latitude")
+
+# ggplot(avg_gh_data, aes(Light, avg_mv_biomass, color = Lat)) +
+#   # geom_boxplot()+
+#   geom_path(aes(group = Lat)) +
+#   geom_point(size = 2) +
+#   facet_wrap(~Herbivory) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   # ylab("Day of Year") +
+#   theme_bw()
+
+```
+
+Main effects of light and herbivory are apparent (and interaction?), with perhaps a weak main effect of latitude.
+
+```{r mv biomass model}
+
+gh_data_noNA <- filter(gh_data, is.na(mv_biomass)=="FALSE")
+
+mv_biomass_mod <- lmer(mv_biomass ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+Anova(mv_biomass_mod)
+## Indicates significant main effects, and Light:Herbivory interaction
+
+qqnorm(residuals(mv_biomass_mod))
+ 
+plot(mv_biomass_mod)
+## Major heteroskedacity in the residuals
+
+hist(log1p(gh_data_noNA$mv_biomass))
+hist(sqrt(gh_data_noNA$mv_biomass))
+
+plot(update(mv_biomass_mod, log1p(mv_biomass) ~ .), main = "ln+1 transformed")
+plot(update(mv_biomass_mod, sqrt(mv_biomass) ~ .), main = "square-rooted")
+## Log transformation results in better residuals
+
+mv_biomass_mod2 <- update(mv_biomass_mod, log1p(mv_biomass) ~ .)
+Anova(mv_biomass_mod2)
+## After transforming response variable only main effects significant
+
+filter(dredge(refitML(mv_biomass_mod2)), delta < 7)
+
+mv_biomass_mod2 <- update(mv_biomass_mod, . ~ Lat + Light + Herbivory + (1|Block))
+qqnorm(residuals(mv_biomass_mod2))
+
+summary(mv_biomass_mod2)
+confint(mv_biomass_mod2)[c(-1,-2),]
+
+``` 
+
+There was substantial heterskedacity in the residuals of the raw biomass data, so we natural-log transformed these data after adding 1 to maintain values greater than zero. The best model had only main effects, but the model also including the Latitude:Light interaction has nearly equal support. Here we report on the model with just the main effects. The light and herbivory had the largest effects, with tiller length greatly reduced by shade and herbivory. Tiller lengths also tended to be shorter in populations that were sourced from higher latitudes.
+
+
 ## Model: Seeds per seed head
+
+1. What does the number of seeds per seed head mean biologically? 
+
+2. Was the number of seeds head counted per plant fixed?
+
+3. What is the biological intepretation?
 
 ```{r plot seeds}
 
@@ -162,38 +506,144 @@ ggplot(gh_data, aes(Lat, seeds_per_SH, color = Light)) +
   geom_point() +
   scale_color_discrete(h = c(50,110)) +
   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
-  theme_bw() +
-  ylab("Seeds per seed head")
+  # theme_bw() +
+  theme_classic() +
+  ylab("Seeds per seed head") +
+  xlab("Latitude")
+
+# ggplot(gh_data, aes(Long, seeds_per_SH, color = Light)) +
+#   geom_point() +
+#   scale_color_discrete(h = c(50,110)) +
+#   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+#   # theme_bw() +
+#   theme_classic() +
+#   ylab("Seeds per seed head") +
+#   xlab("Longitude")
 
 ```
 
-```{r anova of seed production}
+This figure suggests that the herbivory treatment had different effects under ambient and shade conditions, while more seeds were produced per seed head under ambient light conditions. 
 
-m2 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
-Anova(m2)
-summary(m2)
+* The number of seeds per seed head was lower at higher latitudes, with the exception of the herbivory treatment under ambient light conditions where plants from higher latitudes produced more seeds per seed head. 
 
-qqnorm(residuals(m2))
-plot(residuals(m2),fitted(m2))
+    * This exception suggests an interaction between the herbivory treatment and latitude of origin.
 
-step(m2)
+* The main effects of herbivory and shade reduced the number of seeds per seed head.
 
-summary(m2)
+There are `r n_distinct(filter(gh_data, is.na(seeds_per_SH)))` missing values (`NA`) for seeds/seed-head - is this because no seed heads were produced? It also raises the questions of whether these should be treated as true zeroes, i.e. zero seeds were produced, or excluding them as "missing" is the appropriate approach.
+
+Using zeroes or excluding these observations as missing has no effect on the overall relationship, but it does change the coefficient estimate for the herbivory effect by seven. I'm don't think this is a biologically meaningful difference, but it may be more biologically accurate if it is reasonable to think that the light or herbivory treatments may have prevented seeds from being produced. 
+
+These results are with the `NA` values excluded because that's what was done previously.
+
+```{r seed production model}
+
+gh_data_noNA <- filter(gh_data, is.na(seeds_per_SH)=="FALSE")
+# 19 of 384 observations are NA for seeds per seed head 
+
+gh_data$seeds_per_SH[is.na(gh_data$seeds_per_SH)] <- 0
+
+seeds_mod1 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
+seeds_mod2 <- lmer(seeds_per_SH ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+
+# dredge(refitML(seeds_mod1))
+dredge(refitML(seeds_mod2))
+
+# summary(update(seeds_mod1, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))
+summary(update(seeds_mod2, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))
+
+kable(confint.merMod(update(seeds_mod2, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))[c(-1, -2),], caption = "95% confidence intervals for coefficient estimates.")
 
 ```
 
+The main effects of latitude, herbivory, and light were statistically significant (p < .05, confidence intervals don't overlap zero), as was the interaction between herbivory and latitude.
 
+* Fewer seeds per seed-head were produced by plants from higher latitudes.
+
+    * *The exception of plants in the herbivory treatment that were grown under ambient light conditions is indicated by the siginficant positive effect of the interaction between latitude and herbivory.*
+    
+* Plants that were grown in the shade or that were in the herbivory treatment also produced fewer seeds per seed head. There was now interaction between the shade and herbivory treatments.
+
+* Plants that were in the shade X herbivory treatment overall produced the fewest seeds per seed head.
 
  
-## Model: Harvest date (senescence)
+## Model: Seed mass
 
-Fit a model to harvest date, which was based on plant sensecence, using light, herbivory, and latitude as predictor variables. Plots of the raw data suggest that plants sourced from higher latitudes and those in ambient light treatments senesce sooner than those from lower latitudes and shade treatments.
+1. How was this average seed mass calculated?
+
+2. What is the biological interpretation of this vs. seeds per seed head? How are they different?
+
+```{r seed mass prelim figures}
+
+ggplot(gh_data, aes(Lat, AvgSeedMass, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Average seed mass (g)") +
+  xlab("Latitude")
+
+# ggplot(avg_gh_data,
+#        aes(Light, avg_seed_mass, color = Lat)) +
+#   # geom_boxplot()+
+#   geom_path(aes(group = Lat)) +
+#   geom_point(size = 2) +
+#   facet_wrap(~Herbivory) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   # ylab("Day of Year") +
+#   theme_bw()
+
+```
+
+It looks like main effects of latitude and light are likely to be significant, with seed mass lower at higher latitudes, but greater in the shade.
+
+Is it interesting that average seed mass was greater in the shade? Shade results in fewer but also more massive seeds? 
+
+```{seed mass model} 
+
+# summary(gh_data)
+## 20 missing values (NA)
+
+gh_data_noNA <- filter(gh_data, is.na(AvgSeedMass)=="FALSE")
+
+seed_mass_mod <- lmer(AvgSeedMass ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+qqnorm(residuals(seed_mass_mod))
+plot(seed_mass_mod)
+
+Anova(seed_mass_mod)
+# step(seed_mass_mod)
+## Light, Latitude, Light:Lat interaction significant
+
+summary(seed_mass_mod)
 
 
-```{r sensecence prelim figures}
+```
+ 
 
-ggplot(avg_gh_data, 
-       aes(Light, avg_harvest_date, color = as.numeric(Lat))) +
+## Model: Seed mass/plant mass ratio
+
+Drew suggested looking at the seed mass to plant mass ratio (seed mass divided by plant mass)
+
+```{r seed_plant_ratio}
+
+gh_data$seed_plant_mass_ratio <- gh_data$AvgSeedMass/gh_data$mv_biomass
+
+ggplot(gh_data, aes(Lat, seed_plant_mass_ratio, color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = T) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Seed mass : Plant mass ratio") +
+  xlab("Latitude")
+
+# Seed mass:Plant mass ratio
+ggplot(avg_gh_data,
+       aes(Light, seed_plant_ratio, color = Lat)) +
   # geom_boxplot()+
   geom_path(aes(group = Lat)) +
   geom_point(size = 2) +
@@ -202,572 +652,16 @@ ggplot(avg_gh_data,
   scale_color_continuous(low = "green", high = "brown") +
   # guides(linetype = guide_legend(override.aes = list(size = .7)),
              # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
-
-ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light, shape = Herbivory)) +
-  geom_point() +
-  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
-  scale_color_discrete(h = c(60,120)) +
-  guides(linetype = guide_legend(override.aes = list(size = .7)),
-             color = guide_legend(override.aes = list(linetype = 0))) +
-  ylab("Day of Year") +
-  theme_bw()
-
-ggplot(gh_data, aes(Light, HarvestOrdDate, fill = Herbivory)) +
-  geom_boxplot(notch = F) +
-  scale_fill_discrete(h = c(60,120)) +
-  theme_bw()
-
-```
-
-```{r senescence model}
-
-m3 <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
-
-qqnorm(residuals(m3))
-plot(residuals(m3), fitted(m3))
-
-# Anova(m3)
-
-```
-
-There was a major outlier that Kerry investigated, but ended up finding an additional outlier
-
->*KS*: I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). Here is what occurred:
-
-```{r assess senescence model residual outlier}
-
-which(residuals(m3) < -40)
-# [1] 316 (what KS reported)
-
-## I get 48 (and 46 for some reason??, but 48 is the outlier value)
-residuals(m3)[residuals(m3)< -40]
-
-summary(m3@frame)
-gh_data[48,]$HarvestOrdDate
-
-m3.2 <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), 
-             data=gh_data[-48,]) 
-
-summary(m3.2@frame)
-plot(m3.2)
-plot(fitted(m3.2),residuals(m3.2))
-qqnorm(residuals(m3.2))
-
-```
-
-**KS:** Not really sure what to do about this. Maybe do nothing because it is not obvious from data set what data point the outlier represents, so was likely not a data entry problem.
-
-**WD:** with my correction of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
-
-
-```{r compare plots of m3 and m3.2 data}
-
-m3_latitude_plot <- ggplot(m3@frame, aes(Lat, HarvestOrdDate, color = Light)) +
-  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
-  geom_point(aes(shape = Herbivory), size = 2) +
-  scale_color_discrete(h = c(60,120)) +
-  guides(linetype = guide_legend(override.aes = list(size = .7)),
-             color = guide_legend(override.aes = list(linetype = 0))) +
-  ylab("Day of Year") +
-  theme_bw()
-
-m3.2_latitude_plot <- ggplot(m3.2@frame, aes(Lat, HarvestOrdDate, color = Light)) +
-  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
-  geom_point(aes(shape = Herbivory), size = 2) +
-  scale_color_discrete(h = c(60,120)) +
-  guides(linetype = guide_legend(override.aes = list(size = .7)),
-             color = guide_legend(override.aes = list(linetype = 0))) +
-  ylab("Day of Year") +
-  theme_bw()
-
-m3_boxplot <- ggplot(m3@frame, aes(Light, HarvestOrdDate, fill = Herbivory)) +
-  geom_boxplot(notch = F) +
-  scale_fill_discrete(h = c(60,120)) +
-  ylab("Day of Year") +
-  theme_bw()
-m3.2_boxplot <- ggplot(m3.2@frame, aes(Light, HarvestOrdDate, fill = Herbivory)) +
-  geom_boxplot(notch = F) +
-  scale_fill_discrete(h = c(60,120)) +
-  ylab("Day of Year") +
-  theme_bw()
-
-m3_latitude_plot
-m3.2_latitude_plot
-
-m3_boxplot
-m3.2_boxplot
-
-```
- 
-Continue with comparing summaries of the model with the outlier to the model without the outlier.
-
-```{r m3 vs m3.2 models}
-
-Anova(m3)
-Anova(m3.2)
-
-step(m3)
-step(m3.2)
-
-summary(m3)
-summary(m3.2)
-
-``` 
-
-
-## Model: AVG TILLER LENGTH
-
-Preliminary plots of average tiller length with effects of latitude, light, and herbivory indicate a stronger effect of herbivory in the shade treatments than in the ambient light treatments. Also, the effect of herbivory in the ambient light treatments is similar in magnitude to the shade only treatment.
-
-```{r prelim plots avg tiller length}
-
-ggplot(gh_data, aes(Lat, avg_tiller_length, color = Light, shape = Herbivory)) +
-  geom_point() +
-  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
-  scale_color_discrete(h = c(60,120)) +
-  guides(linetype = guide_legend(override.aes = list(size = .7)),
-             color = guide_legend(override.aes = list(linetype = 0))) +
-  ylab("Tiller length (cm)") +
-  theme_bw()
-
-ggplot(gh_data, aes(Light, avg_tiller_length, fill = Herbivory)) +
-  geom_boxplot(notch = T) +
-  scale_fill_discrete(h = c(60,120)) +
-  ylab("Tiller length (cm)") +
-  theme_bw()
-
-tiller_length <- gh_data %>% 
-  group_by(pop_lat, Light) %>% 
-  summarise(avg_tiller_length = mean(avg_tiller_length, na.rm = T),
-            avg_seed_mass = mean(AvgSeedMass, na.rm = T))
-
-ggplot(avg_harv_date, aes(Light, avg_seed_mass, color = pop_lat)) +
-  # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
-  geom_point(size = 2) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_discrete(h = c(0,160)) +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
-
-ggplot(avg_gh_data_light, 
-       aes(Light, avg_tiller_length, color = as.numeric(pop_lat))) +
-  # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
-  geom_point(size = 2) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
+  ylab("Seed mass : Plant mass ratio") +
+  # theme_bw() +
+  theme_classic() +
+  theme(strip.background = element_blank())
 
 ```
 
 
 
-```{r avg tiller length model}
-
-m4<-lmer(avg_tiller_length ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
-
-qqnorm(residuals(m4))
-plot(m4)
-# plot(fitted(m4),residuals(m4))
-summary(m4)
-# Anova(m4)
-
-# log transformation of average tiller length
-m4.2<-lmer(log(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
-qqnorm(residuals(m4.2))
-plot(m4.2)
-# plot(fitted(m4.2),residuals(m4.2))
-summary(m4.2)
-# Anova(m4.2)
-
-# square root transformation of average tiller length
-m4.3<-lmer(sqrt(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
-qqnorm(residuals(m4.3))
-plot(m4.3)
-# plot(fitted(m4.3),residuals(m4.3))
-summary(m4.3)
-# Anova(m4.3)
-
-
-m4.1<-lmer(avg_tiller_length ~ Herbivory + Lat*Light + (1|Block), data = gh_data)
-plot(m4.1)
-summary(m4.1)
-
-
-AICc(m4, m4.2, m4.3, m4.1)
-BIC(m4, m4.2, m4.3, m4.1)
-
-
-step(m4.3)
- 
-# Random effects:
-#             Chi.sq Chi.DF elim.num p.value    
-# (1 | Block)    149      1        0  <2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Fixed effects:
-#                     Sum Sq Mean Sq NumDF DenDF F.value elim.num   Pr(>F)    
-# Light               3528.8  3528.8     1    29  16.261        0 0.000366 ***
-# Herbivory           2022.0  2022.0     1    29   7.853        0 0.008947 ** 
-# Lat                 6911.9  6911.9     1   342  27.924        0 2.25e-07 ***
-# Light:Herbivory      383.3   383.3     1    28   1.536        4 0.225551    
-# Light:Lat             25.1    25.1     1   340   0.134        2 0.714814    
-# Herbivory:Lat         37.5    37.5     1   341   0.118        3 0.731674    
-# Light:Herbivory:Lat   50.6    50.6     1   339   0.203        1 0.652538    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Least squares means:
-#                Light Herbivory Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light  ambient   1.0        NA    87.68           3.98 29.1    22.0     79.5     95.8  <2e-16 ***
-# Light  shade     2.0        NA    64.88           3.98 29.0    16.3     56.7     73.0  <2e-16 ***
-# Herbivory  N      NA       1.0    84.20           3.98 29.1    21.1     76.1     92.3  <2e-16 ***
-# Herbivory  Y      NA       2.0    68.36           3.98 29.0    17.2     60.2     76.5  <2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-#  Differences of LSMEANS:
-#                     Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light ambient-shade     22.8           5.65 29.0    4.03    11.23     34.4   4e-04 ***
-# Herbivory N-Y           15.8           5.65 29.0    2.80     4.28     27.4   0.009 ** 
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Final model:
-# lme4::lmer(formula = Avg..tiller.length ~ Light + Herbivory + 
-#     Lat + (1 | Block), REML = reml, contrasts = l)
-
-summary(m4)
-# Linear mixed model fit by REML ['merModLmerTest']
-# Formula: Avg..tiller.length ~ Light * Herbivory * Lat + (1 | Block) 
-#  
-# REML criterion at convergence: 3176.385 
-#  
-# Random effects:
-#  Groups   Name        Variance Std.Dev.
-#  Block    (Intercept) 225.5    15.02   
-#  Residual             249.4    15.79   
-# Number of obs: 375, groups: Block, 32
-#  
-# Fixed effects:
-#                           Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)               203.9421    37.5533   5.431 1.05e-07 ***
-# Lightshade                -44.1777    49.7365  -0.888   0.3750    
-# HerbivoryY                -37.9922    49.7365  -0.764   0.4455    
-# Lat                        -3.0368     1.0048  -3.022   0.0027 ** 
-# Lightshade:HerbivoryY      17.1906    69.9225   0.246   0.8059    
-# Lightshade:Lat              0.7672     1.3289   0.577   0.5641    
-# HerbivoryY:Lat              0.7880     1.3289   0.593   0.5536    
-# Lightshade:HerbivoryY:Lat  -0.8412     1.8668  -0.451   0.6525    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Correlation of Fixed Effects:
-#             (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
-# Lightshade  -0.755                                          
-# HerbivoryY  -0.755  0.570                                   
-# Lat         -0.987  0.746  0.746                            
-# Lghtshd:HrY  0.537 -0.711 -0.711 -0.530                     
-# Lightshd:Lt  0.747 -0.987 -0.564 -0.756  0.702              
-# HerbvryY:Lt  0.747 -0.564 -0.987 -0.756  0.702  0.572       
-# Lghtsh:HY:L -0.531  0.703  0.703  0.538 -0.987 -0.712 -0.712
-```
-
-
-## Model: Mv BIOMASS
-
-```{r mv biomass prelim figures}
-ggplot(avg_gh_data, 
-       aes(Light, avg_mv_biomass, color = as.numeric(pop_lat))) +
-  # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
-  geom_point(size = 2) +
-  facet_wrap(~Herbivory) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
-
-```
-
-```{r mv biomass model}
-
-m5<-lmer(Mv.biomass~Light*Herbivory*Lat+(1|Block))
-Anova(m5)
-
-# Analysis of Deviance Table (Type II Wald chisquare tests)
-#  
-# Response: Mv.biomass
-#                        Chisq Df Pr(>Chisq)    
-# Light               416.2581  1  < 2.2e-16 ***
-# Herbivory            58.2884  1  2.264e-14 ***
-# Lat                   4.8523  1  0.0276094 *  
-# Light:Herbivory      13.6228  1  0.0002235 ***
-# Light:Lat             0.9203  1  0.3374069    
-# Herbivory:Lat         2.0507  1  0.1521381    
-# Light:Herbivory:Lat   2.4377  1  0.1184481    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-
-qqnorm(residuals(m5))
- 
-plot(fitted(m5),residuals(m5))
- 
-m5.3<-lmer(sqrt(Mv.biomass)~Light*Herbivory*Lat+(1|Block))
-qqnorm(residuals(m5.3))
- 
-plot(fitted(m5.3),residuals(m5.3))
- 
-Anova(m5.3)
-# Analysis of Deviance Table (Type II Wald chisquare tests)
-#  
-# Response: sqrt(Mv.biomass)
-#                        Chisq Df Pr(>Chisq)    
-# Light               439.9080  1  < 2.2e-16 ***
-# Herbivory            57.6818  1  3.081e-14 ***
-# Lat                   7.4522  1   0.006336 ** 
-# Light:Herbivory       1.6065  1   0.204984    
-# Light:Lat             0.0173  1   0.895354    
-# Herbivory:Lat         0.4202  1   0.516820    
-# Light:Herbivory:Lat   1.8224  1   0.177030    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-# > step(m5.3)
-#  
-# Random effects:
-#             Chi.sq Chi.DF elim.num p.value    
-# (1 | Block)   14.9      1        0   1e-04 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Fixed effects:
-#                       Sum Sq  Mean Sq NumDF DenDF  F.value elim.num   Pr(>F)    
-# Light               266.4527 266.4527     1  29.1 431.0860        0  < 2e-16 ***
-# Herbivory            37.7109  37.7109     1  29.1  56.4833        0 2.73e-08 ***
-# Lat                   4.8916   4.8916     1 344.3   7.5100        0  0.00646 ** 
-# Light:Herbivory       1.0505   1.0505     1  28.0   1.6119        4  0.21468    
-# Light:Lat             0.0297   0.0297     1 342.2   0.0173        2  0.89549    
-# Herbivory:Lat         0.2743   0.2743     1 343.2   0.4487        3  0.50342    
-# Light:Herbivory:Lat   1.1895   1.1895     1 341.2   1.8224        1  0.17793    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Least squares means:
-#                Light Herbivory Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light  ambient   1.0        NA   5.3801         0.0953 29.0    56.5     5.19     5.57  <2e-16 ***
-# Light  shade     2.0        NA   2.5709         0.0954 29.1    27.0     2.38     2.77  <2e-16 ***
-# Herbivory  N      NA       1.0   4.4839         0.0954 29.1    47.0     4.29     4.68  <2e-16 ***
-# Herbivory  Y      NA       2.0   3.4670         0.0953 29.0    36.4     3.27     3.66  <2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-#  Differences of LSMEANS:
-#                     Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light ambient-shade      2.8          0.135 29.1   20.76     2.53     3.09  <2e-16 ***
-# Herbivory N-Y            1.0          0.135 29.1    7.52     0.74     1.29  <2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Final model:
-# lme4::lmer(formula = sqrt(Mv.biomass) ~ Light + Herbivory + Lat + 
-#     (1 | Block), REML = reml, contrasts = l)
-
-summary(m5.3)
-# Linear mixed model fit by REML ['merModLmerTest']
-# Formula: sqrt(Mv.biomass) ~ Light * Herbivory * Lat + (1 | Block) 
-#  
-# REML criterion at convergence: 956.7899 
-#  
-# Random effects:
-#  Groups   Name        Variance Std.Dev.
-#  Block    (Intercept) 0.08585  0.2930  
-#  Residual             0.65269  0.8079  
-# Number of obs: 377, groups: Block, 32
-#  
-# Fixed effects:
-#                           Estimate Std. Error t value Pr(>|t|)    
-# (Intercept)               10.16400    1.87513   5.420 1.12e-07 ***
-# Lightshade                -5.13077    2.49852  -2.054   0.0408 *  
-# HerbivoryY                -4.70971    2.49850  -1.885   0.0603 .  
-# Lat                       -0.11304    0.05059  -2.235   0.0261 *  
-# Lightshade:HerbivoryY      5.08611    3.52634   1.442   0.1501    
-# Lightshade:Lat             0.05820    0.06737   0.864   0.3882    
-# HerbivoryY:Lat             0.09526    0.06737   1.414   0.1583    
-# Lightshade:HerbivoryY:Lat -0.12833    0.09506  -1.350   0.1779    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Correlation of Fixed Effects:
-#             (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
-# Lightshade  -0.750                                          
-# HerbivoryY  -0.751  0.563                                   
-# Lat         -0.997  0.748  0.748                            
-# Lghtshd:HrY  0.532 -0.709 -0.709 -0.530                     
-# Lightshd:Lt  0.749 -0.997 -0.562 -0.751  0.706              
-# HerbvryY:Lt  0.749 -0.562 -0.997 -0.751  0.706  0.564       
-# Lghtsh:HY:L -0.531  0.707  0.707  0.532 -0.997 -0.709 -0.709
-``` 
- 
-## Model: SEED MASS
-
-```{r seed mass prelim figures}
-ggplot(avg_gh_data, 
-       aes(Light, avg_seed_mass, color = as.numeric(pop_lat))) +
-  # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
-  geom_point(size = 2) +
-  facet_wrap(~Herbivory) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
-
-ggplot(avg_gh_data_light, 
-       aes(Light, seed_plant_ratio, color = as.numeric(pop_lat))) +
-  # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
-  geom_point(size = 2) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
-
-ggplot(avg_gh_data, 
-       aes(Light, seed_plant_ratio, color = as.numeric(pop_lat))) +
-  # geom_boxplot()+
-  geom_path(aes(group = pop_lat)) +
-  geom_point(size = 2) +
-  facet_wrap(~Herbivory) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-  scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
-  theme_bw()
-
-
-```
-
-```{seed mass model} 
-
-m6<-lmer(AvgSeedMass~Light*Herbivory*Lat+(1|Block))
-Anova(m6)
-
-# Analysis of Deviance Table (Type II Wald chisquare tests)
-#  
-# Response: AvgSeedMass
-#                       Chisq Df Pr(>Chisq)    
-# Light               18.1399  1  2.053e-05 ***
-# Herbivory            0.2923  1    0.58873    
-# Lat                 34.6701  1  3.906e-09 ***
-# Light:Herbivory      0.6328  1    0.42633    
-# Light:Lat            4.1569  1    0.04146 *  
-# Herbivory:Lat        0.0459  1    0.83041    
-# Light:Herbivory:Lat  0.6087  1    0.43529    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-
-qqnorm(residuals(m6))
-plot(residuals(m6),fitted(m6))
-
-step(m6)
- 
-# Random effects:
-#             Chi.sq Chi.DF elim.num p.value    
-# (1 | Block)   25.6      1        0   4e-07 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Fixed effects:
-#                       Sum Sq  Mean Sq NumDF DenDF F.value elim.num   Pr(>F)    
-# Light               3.90e-07 3.90e-07     1 557.1  5.7704        0   0.0166 *  
-# Herbivory           6.15e-09 6.15e-09     1  24.9  0.2959        4   0.5913    
-# Lat                 7.65e-07 7.65e-07     1 536.3 34.7031        0 6.79e-09 ***
-# Light:Herbivory     1.42e-08 1.42e-08     1  24.0  0.6359        3   0.4330    
-# Light:Lat           9.08e-08 9.08e-08     1 536.3  4.1409        0   0.0424 *  
-# Herbivory:Lat       1.01e-09 1.01e-09     1 540.2  0.0459        2   0.8304    
-# Light:Herbivory:Lat 1.34e-08 1.34e-08     1 537.6  0.6087        1   0.4356    
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Least squares means:
-#                Light Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light  ambient   1.0   0.0005         0.0000 25.7 27.0600    5e-04    6e-04  <2e-16 ***
-# Light  shade     2.0   0.0007         0.0000 25.6 33.1600    6e-04    7e-04  <2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-#  Differences of LSMEANS:
-#                     Estimate Standard Error   DF t-value Lower CI Upper CI p-value    
-# Light ambient-shade      0.0         0.0000 25.7    -4.3   -2e-04   -1e-04   2e-04 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Final model:
-# lme4::lmer(formula = AvgSeedMass ~ Light + Lat + (1 | Block) + 
-#     Light:Lat, REML = reml, contrasts = l)
-# Warning messages:
-# 1: In model.matrix.default(mt, mf, contrasts) :
-#   variable 'Herbivory' is absent, its contrast will be ignored
-# 2: In model.matrix.default(mt, mf, contrasts) :
-#   variable 'Herbivory' is absent, its contrast will be ignored
-# 3: In model.matrix.default(mt, mf, contrasts) :
-#   variable 'Herbivory' is absent, its contrast will be ignored
-
-summary(m6)
-# Linear mixed model fit by REML ['merModLmerTest']
-# Formula: AvgSeedMass ~ Light * Herbivory * Lat + (1 | Block) 
-#  
-# REML criterion at convergence: -5190.653 
-#  
-# Random effects:
-#  Groups   Name        Variance  Std.Dev. 
-#  Block    (Intercept) 4.697e-09 6.854e-05
-#  Residual             2.207e-08 1.486e-04
-# Number of obs: 364, groups: Block, 32
-#  
-# Fixed effects:
-#                             Estimate Std. Error t value Pr(>|t|)   
-# (Intercept)                9.609e-04  3.487e-04   2.756  0.00605 **
-# Lightshade                 1.069e-03  4.652e-04   2.298  0.02194 * 
-# HerbivoryY                 3.642e-04  4.641e-04   0.785  0.43291   
-# Lat                       -1.192e-05  9.403e-06  -1.268  0.20535   
-# Lightshade:HerbivoryY     -5.555e-04  6.554e-04  -0.848  0.39702   
-# Lightshade:Lat            -2.495e-05  1.254e-05  -1.990  0.04713 * 
-# HerbivoryY:Lat            -8.804e-06  1.251e-05  -0.704  0.48184   
-# Lightshade:HerbivoryY:Lat  1.378e-05  1.766e-05   0.780  0.43563   
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 
-#  
-# Correlation of Fixed Effects:
-#             (Intr) Lghtsh HrbvrY Lat    Lgh:HY Lght:L HrbY:L
-# Lightshade  -0.750                                          
-# HerbivoryY  -0.751  0.563                                   
-# Lat         -0.996  0.747  0.748                            
-# Lghtshd:HrY  0.532 -0.710 -0.708 -0.530                     
-# Lightshd:Lt  0.747 -0.996 -0.561 -0.750  0.707              
-# HerbvryY:Lt  0.749 -0.561 -0.996 -0.752  0.705  0.564       
-# Lghtsh:HY:L -0.530  0.707  0.706  0.533 -0.996 -0.710 -0.708
-
-```
- 
- 
-## Model: Specific Leaf Area
+## Model: Specific leaf area
 
 
 ```{r prelim sla figures}
