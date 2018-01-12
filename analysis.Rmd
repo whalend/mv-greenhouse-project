@@ -476,13 +476,13 @@ gh_data_noNA <- filter(gh_data, is.na(mv_biomass)=="FALSE")
 
 mv_biomass_mod <- lmer(mv_biomass ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
 # qqnorm(residuals(mv_biomass_mod))
-plot(mv_biomass_mod)
+# plot(mv_biomass_mod)
 ## Major heteroskedacity in the residuals
 
-hist(log1p(gh_data_noNA$mv_biomass))
-hist(sqrt(gh_data_noNA$mv_biomass))
+# hist(log1p(gh_data_noNA$mv_biomass))
+# hist(sqrt(gh_data_noNA$mv_biomass))
 
-plot(update(mv_biomass_mod, log1p(mv_biomass) ~ .), main = "biomass log-transformed")
+# plot(update(mv_biomass_mod, log1p(mv_biomass) ~ .), main = "biomass log-transformed")
 # plot(update(mv_biomass_mod, sqrt(mv_biomass) ~ .), main = "square-rooted")
 ## Log transformation results in better residuals
 
@@ -491,6 +491,7 @@ Anova(mv_biomass_mod2)
 ## After transforming response variable only main effects significant
 
 filter(dredge(refitML(mv_biomass_mod2)), delta < 7)
+
 ```
 
 I log-transformed the response variable to remove the heteroscedasticity in the residuals seen in the model of the untransformed data.
@@ -520,7 +521,7 @@ ggplot(gh_data, aes(Lat, log(mv_biomass), color = Light)) +
 
 ```
 
-There was substantial heterskedacity in the residuals of the raw biomass data, so we natural-log transformed these data after adding 1 to maintain values greater than zero. The best model had only main effects, but the model also including the Latitude:Light interaction has nearly equal support. Here we report on the model with just the main effects. The light and herbivory had the largest effects, with tiller length greatly reduced by shade and herbivory. Tiller lengths also tended to be shorter in populations that were sourced from higher latitudes.
+There was substantial heterskedacity in the residuals of the raw biomass data, so we applied a natural-log transformation to these. The best model had only main effects, but the model also including the Latitude:Light interaction has nearly equal support. Here we report on the model with just the main effects. The light and herbivory had the largest effects, with tiller length greatly reduced by shade and herbivory. Tiller lengths also tended to be shorter in populations that were sourced from higher latitudes.
 
 
 ## Model: Seeds per seed head
