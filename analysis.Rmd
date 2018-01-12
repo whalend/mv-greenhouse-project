@@ -99,7 +99,7 @@ We need more detail on the methods, especially the induced herbivory part of the
  2. Could the "herbivory" possibly just make it an additional light treatment, e.g. reduction of leaf area without inducing defense mechanisms?
 
 
-I'm evaluating Kerry's analysis by first repeating what she did using her code and embedding figures.
+I'm evaluating Kerry's analysis by first repeating what she did using her code, and then making some revisions and embedding figures.
 
 
 # Building off of analysis by Kerry
@@ -115,7 +115,7 @@ A mixed-effects models were applied to examine the interaction of light and herb
 
 The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
 
-What is the biological interpretation?
+What is the biological significance of flowering date?
 
 ```{r day of first flower prelim figures}
 
@@ -141,7 +141,7 @@ ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
 
 These figures indicate that flowering date is earlier at higher latitudes, and that herbivory and light treatments are not siginificant.
 
-```{r anova date of first flower, results='asis'}
+```{r date of first flower model}
 
 # bargraph.CI(Lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
 #             ylab = "Flower Day", xlab = "Population latitude",
@@ -151,25 +151,23 @@ These figures indicate that flowering date is earlier at higher latitudes, and t
 gh_data_noNA <- filter(gh_data, is.na(FlowerOrdDate)=="FALSE")
 
 flowering_mod <- lmer(FlowerOrdDate ~ Light*Herbivory*Lat + (1|Block), data=gh_data_noNA)
+qqnorm(residuals(flowering_mod))
+plot(flowering_mod)
+
 Anova(flowering_mod)
 
-qqnorm(residuals(flowering_mod))
-plot(residuals(flowering_mod),fitted(flowering_mod))
+step(flowering_mod)# keep block effect
+dredge(refitML(flowering_mod)) %>% filter(delta < 7)
 
-# step(flowering_mod)
-kable(dredge(refitML(flowering_mod)) %>% filter(delta < 7), caption = "Models where ∆AICc < 7 compared to best model")
-# plot(gh_data$Lat, gh_data$FlowerOrdDate)
-# FlowerReg <- lm(FlowerOrdDate~Lat, data = gh_data)
-# abline(FlowerReg)
+flowering_mod2 <- lmer(FlowerOrdDate ~ Lat + (1|Block), 
+                      data = gh_data_noNA)
+summary(flowering_mod2)
 
-# summary(flowering_mod)
-summary(update(flowering_mod, . ~ Lat + Light + (1|Block) ))
-
-confint(update(flowering_mod, . ~ Lat + Light + (1|Block) ))
+# confint(flowering_mod2)
 
 ```
 
-Latitude of the origin population was the only signficant explanatory variable for the flowering date response, however, a model that also included the *Light* treatment main effect was equally supported in AIC comparisons. In general, flowering date was earlier for populations from from higher latitudes and in the shade treatments.
+Latitude of the origin population was the only signficant explanatory variable for the flowering date response, however, a model that also included the *Light* treatment main effect was equally supported in AIC comparisons. In general, flowering date was earlier for populations from from higher latitudes.
 
  
 ## Model: Harvest date (senescence)
@@ -234,9 +232,13 @@ plot(residuals(senescence_mod), fitted(senescence_mod))
 
 ```
 
-There was a major outlier that Kerry investigated, but ended up finding an additional outlier
+There was a major outlier that Kerry investigated, but ended up finding an additional outlier. 
 
->*KS*: I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). Here is what occurred:
+>*KS*: I attempted to remove the outlier and re-run the analysis in R using commands, but the results are strange. The row containing the data point causing the anomalous residual is removed, but when the model is re-run, the result is slightly different (but overall same conclusions), but there is a new abnormal residual corresponding to the previous row (which contains data from a different pot). 
+
+It looks like the outlier affects the normality more than the residual variance, so it shouldn't dramatically affect the overall model fit. It could change the estimates a bit. 
+
+**WD:** with my correction (I think) of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
 
 ```{r assess senescence model residual outlier}
 
@@ -260,18 +262,17 @@ qqnorm(residuals(senescence_mod.2))
 
 ```
 
-**KS:** Not really sure what to do about this. Maybe do nothing because it is not obvious from data set what data point the outlier represents, so was likely not a data entry problem.
-
-**WD:** with my correction of the data point removed there are no longer major outliers in the residual plots. Based on summary of the data frames for the two models, the observation had no herbivory and was under ambient light conditions.
-
 ```{r model comparison}
 
 Anova(senescence_mod.2)
+step(senescence_mod.2)# keep block
 filter(dredge(refitML(senescence_mod.2)), delta < 7)
 
-summary(update(senescence_mod.2, . ~ Lat + Light + (1|Block)))
+senescence_mod.2 <- lmer(HarvestOrdDate ~ Lat + Light + (1|Block), 
+                         data = gh_data_noNA)
+summary(senescence_mod.2)
 
-confint(update(senescence_mod.2, . ~ Lat + Light + (1|Block)))[c(-1,-2),]
+# confint(update(senescence_mod.2, . ~ Lat + Light + (1|Block)))[c(-1,-2),]
 
 ```
 
@@ -387,36 +388,33 @@ plot(tiller_mod)
 # plot(fitted(tiller_mod),residuals(tiller_mod))
 Anova(tiller_mod)
 ## Anova indicates only the main effects are statistically significant
+
+step(tiller_mod)# keep block
 filter(dredge(refitML(tiller_mod)), delta < 7)
 ## Equal support for main effects only and main effects plus Herb:Light interaction
 
 # # log transformation of average tiller length
-# tiller_mod.2<-lmer(log(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
+# tiller_mod.2<-lmer(log(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
 # qqnorm(residuals(tiller_mod.2))
-# plot(tiller_mod.2)
-# # plot(fitted(tiller_mod.2),residuals(tiller_mod.2))
+# plot(tiller_mod.2, main = "log-transformed")
+# plot(fitted(tiller_mod.2),residuals(tiller_mod.2))
 # summary(tiller_mod.2)
 # # Anova(tiller_mod.2)
 
-# # square root transformation of average tiller length
-# tiller_mod.3<-lmer(sqrt(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data)
+## square root transformation of average tiller length
+# tiller_mod.3<-lmer(sqrt(avg_tiller_length) ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
 # qqnorm(residuals(tiller_mod.3))
-# 
-# # plot(fitted(tiller_mod.3),residuals(tiller_mod.3))
+# plot(tiller_mod.3, main = "square-root transformed")
 # summary(tiller_mod.3)
-# # Anova(tiller_mod.3)
+# Anova(tiller_mod.3)
 
 # tiller_mod.1<-lmer(avg_tiller_length ~ Herbivory + Lat*Light + (1|Block), data = gh_data_noNA)
 # plot(tiller_mod.1)
 # summary(tiller_mod.1)
-# 
-# 
-# AICc(tiller_mod, tiller_mod.2, tiller_mod.3, tiller_mod.1)
-# BIC(tiller_mod, tiller_mod.2, tiller_mod.3, tiller_mod.1)
-# step(tiller_mod.3)
 
-summary(update(tiller_mod, . ~ Lat + Light + Herbivory + (1|Block)))
-confint(update(tiller_mod, . ~ Lat + Light + Herbivory + (1|Block)))[c(-1,-2),]
+tillermod_2 <- lmer(avg_tiller_length ~ Lat + Light + Herbivory + (1|Block), data = gh_data_noNA)
+summary(tillermod_2)
+# confint(update(tiller_mod, . ~ Lat + Light + Herbivory + (1|Block)))[c(-1,-2),]
 
 ```
 
@@ -457,11 +455,7 @@ Main effects of light and herbivory are apparent (and interaction?), with perhap
 gh_data_noNA <- filter(gh_data, is.na(mv_biomass)=="FALSE")
 
 mv_biomass_mod <- lmer(mv_biomass ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
-Anova(mv_biomass_mod)
-## Indicates significant main effects, and Light:Herbivory interaction
-
 qqnorm(residuals(mv_biomass_mod))
- 
 plot(mv_biomass_mod)
 ## Major heteroskedacity in the residuals
 
@@ -469,22 +463,35 @@ hist(log1p(gh_data_noNA$mv_biomass))
 hist(sqrt(gh_data_noNA$mv_biomass))
 
 plot(update(mv_biomass_mod, log1p(mv_biomass) ~ .), main = "ln+1 transformed")
-plot(update(mv_biomass_mod, sqrt(mv_biomass) ~ .), main = "square-rooted")
+# plot(update(mv_biomass_mod, sqrt(mv_biomass) ~ .), main = "square-rooted")
 ## Log transformation results in better residuals
 
-mv_biomass_mod2 <- update(mv_biomass_mod, log1p(mv_biomass) ~ .)
+mv_biomass_mod2 <- lmer(log(mv_biomass) ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
 Anova(mv_biomass_mod2)
 ## After transforming response variable only main effects significant
 
 filter(dredge(refitML(mv_biomass_mod2)), delta < 7)
 
-mv_biomass_mod2 <- update(mv_biomass_mod, . ~ Lat + Light + Herbivory + (1|Block))
-qqnorm(residuals(mv_biomass_mod2))
+mv_biomass_mod2 <- lmer(log(mv_biomass) ~ Lat + Light + Herbivory + (1|Block), data = gh_data_noNA)
+plot(mv_biomass_mod2)
 
 summary(mv_biomass_mod2)
-confint(mv_biomass_mod2)[c(-1,-2),]
+# confint(mv_biomass_mod2)[c(-1,-2),]
 
 ``` 
+
+```{r log mv biomass figure}
+
+ggplot(gh_data, aes(Lat, log(mv_biomass), color = Light)) +
+  geom_point() +
+  scale_color_discrete(h = c(50,110)) +
+  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+  # theme_bw() +
+  theme_classic() +
+  ylab("Log-transformed plant biomass (g)") +
+  xlab("Latitude")
+
+```
 
 There was substantial heterskedacity in the residuals of the raw biomass data, so we natural-log transformed these data after adding 1 to maintain values greater than zero. The best model had only main effects, but the model also including the Latitude:Light interaction has nearly equal support. Here we report on the model with just the main effects. The light and herbivory had the largest effects, with tiller length greatly reduced by shade and herbivory. Tiller lengths also tended to be shorter in populations that were sourced from higher latitudes.
 
