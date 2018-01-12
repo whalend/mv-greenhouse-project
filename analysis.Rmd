@@ -1,6 +1,5 @@
 ---
 title: "Analysis of Plasticity in Microstegium"
-author: "K.B. Stricker, W.W. Dillon, D.T. Hiatt, A.E. Kendig, S.L. Flory"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
@@ -674,6 +673,9 @@ step(seed_mass_mod)# keep block
 ### Seed mass: final model
 
 ```{r seed mass final model}
+
+gh_data_noNA <- filter(gh_data, is.na(AvgSeedMass)=="FALSE")
+
 seed_mass_mod2 <- lmer(AvgSeedMass ~ Lat + Light + Light:Lat + (1|Block), 
                        data = gh_data_noNA)
 # plot(seed_mass_mod2)
