@@ -76,9 +76,9 @@ An investigation into phenotypic plasticity of *Microstegium* across a latitudin
 
 # Methods
 
-Seeds were sourced from 12 populations spanning ~6 degrees of latitude (32.58º to 38.97º) in INSERT CONTINENT/COUNTRY and then grown in a common greenhouse experiment. There were 2-3 seeds per plot and they were exposed to either shade or ambient lighting for the duration of the experiment. The shade treatment decreased light by ~90%. 
+Seeds were sourced from 12 populations spanning ~6 degrees of latitude (32.58º to 38.97º) in INSERT CONTINENT/COUNTRY and then grown in a common greenhouse experiment. The greenhouse was arranged into 32 blocks, where each block had every population (12 pots). Each pot was planted with 2-3 seeds. Half of the blocks (16) were manipulated by constructing shade enclosures that decreased light by ~90%, while the other half were exposed to ambient light conditions. Within each light treatment, eight blocks received an herbivory treatment implemented such that each population was equally represented.
 
-An herbivory treatment was implemented initially using fall army worms (FAW). Herbivory reduced overhead leaf area by 13.1% on average before FAW pupation. Because we were interested in a much more significant level of herbivory, we supplemented damage by FAW by removing most of the remaining leaf biomass by hand, resulting in a total reduction of 45.5% overhead leaf area.
+The herbivory treatment was initially done using fall army worms (FAW). Overhead leaf area reduced by 13.1% on average before FAW pupation. Because we were interested in a much more significant level of herbivory, we supplemented damage by FAW by removing most of the remaining leaf biomass by hand, resulting in a total reduction of 45.5% overhead leaf area.
 
 
 # Some notes:
