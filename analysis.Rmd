@@ -59,9 +59,10 @@ avg_gh_data_no_herb <- no_herbivory %>%
             seed_plant_ratio = avg_seed_mass/avg_mv_biomass)
 
 avg_gh_data <- gh_data %>% 
-  group_by(Lat, Herbivory, Light) %>% 
+  group_by(Lat, pop_lat, Herbivory, Light) %>% 
   summarise(avg_harvest_date = mean(HarvestOrdDate, na.rm = T),
             avg_flower_date = mean(FlowerOrdDate, na.rm = T),
+            se_flower_date = sd(FlowerOrdDate, na.rm = T)/sqrt(length(!is.na(FlowerOrdDate))),
             avg_seed_mass = mean(AvgSeedMass, na.rm = T),
             avg_tiller_length = mean(avg_tiller_length, na.rm = T),
             avg_seeds_per_sh = mean(seeds_per_SH, na.rm = T),
@@ -85,7 +86,7 @@ The herbivory treatment was initially done using fall army worms (FAW). Overhead
 
 * Abiotic (shade) and biotic (herbivory) treatments were nested
 
-* Herbivory by fall army worm didn't reduce overhead leaf area enough (mean = 13.1%); supplemented to have total reduction of 45.5% overhead leaf area. 
+* Herbivory by fall army worm didn't reduce overhead leaf area enough (mean = 13.1%); supplemented to have total reduction of 45.5% overhead leaf area across all plants. 
      
     - These are conservative estimates because they don't account for the loss of biomass under the topmost level of vegetation.
     
@@ -137,16 +138,47 @@ ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
 #   ylab("Day of first flowering") +
 #   xlab("Longitude")
 
+# bargraph.CI(Lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
+#             ylab = "Flower Day", xlab = "Population latitude",
+#             err.width = .05, y.leg = 310, ylim = c(245,310))
+
+avg_gh_data$Herbivory <- factor(avg_gh_data$Herbivory, levels = c("N","Y"), labels = c("No Herbivory", "Herbivory"))
+ggplot(filter(avg_gh_data), 
+       aes(factor(pop_lat), avg_flower_date, fill = Light)) +
+  geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
+  geom_errorbar(aes(ymin = avg_flower_date - se_flower_date, ymax = avg_flower_date + se_flower_date), width = .1, position=position_dodge(width = .7)) +
+  scale_fill_manual(values = c("grey97","grey35"))+
+  # scale_fill_discrete(h = c(120,40),l = 70) +
+  facet_wrap(~Herbivory) +
+  # theme_classic() +
+  theme_bw() +
+  xlab("Population") + ylab("Average day of first flower") +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+# ggsave("Figures/flowering_bargraph.png", dpi = 600, width = 7.5)
+
+
+# ggplot(avg_gh_data,
+#        aes(Light, avg_flower_date, color = as.numeric(Lat))) +
+#   # geom_boxplot()+
+#   geom_path(aes(group = Lat)) +
+#   geom_point(size = 2) +
+#   facet_wrap(~Herbivory) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   # ylab("Day of Year") +
+#   theme_bw() +
+#   theme(strip.background = element_blank())
+
 ```
 
 These figures indicate that flowering date is earlier at higher latitudes, and that herbivory and light treatments are not siginificant.
 
 ### Day of first flower model
 ```{r date of first flower model}
-
-# bargraph.CI(Lat, FlowerOrdDate, group = Light, data = filter(gh_data, Herbivory == "N"), legend = T,
-#             ylab = "Flower Day", xlab = "Population latitude",
-#             err.width = .05, y.leg = 310, ylim = c(245,310))
 
 # summary(gh_data)
 gh_data_noNA <- filter(gh_data, is.na(FlowerOrdDate)=="FALSE")
@@ -167,8 +199,11 @@ dredge(refitML(flowering_mod)) %>% filter(delta < 7)
 flowering_mod2 <- lmer(FlowerOrdDate ~ Lat + (1|Block), 
                       data = gh_data_noNA)
 summary(flowering_mod2)
-
 # confint(flowering_mod2)
+
+flowering_mod3 <- lmer(FlowerOrdDate ~ factor(pop_lat) + (1|Block), 
+                      data = gh_data_noNA)
+summary(flowering_mod3)
 
 ```
 
@@ -218,6 +253,33 @@ ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light)) +
 #   scale_fill_discrete(h = c(60,120)) +
 #   theme_bw()
 
+ggplot(avg_gh_data, aes(factor(pop_lat), avg_harvest_date, fill = Light)) +
+  geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
+  geom_errorbar(aes(ymin = avg_flower_date - se_flower_date, ymax = avg_flower_date + se_flower_date), width = .1, position=position_dodge(width = .7)) +
+  scale_fill_manual(values = c("grey97","grey35"))+
+  # scale_fill_discrete(h = c(120,40),l = 70) +
+  facet_wrap(~Herbivory) +
+  # theme_classic() +
+  theme_bw() +
+  xlab("Population") + ylab("Average day of first flower") +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+
+ggplot(avg_gh_data,
+       aes(Light, avg_harvest_date, color = (pop_lat))) +
+  # geom_boxplot()+
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  facet_wrap(~Herbivory) +
+  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+  scale_color_continuous(low = "green", high = "brown") +
+  # guides(linetype = guide_legend(override.aes = list(size = .7)),
+             # color = guide_legend(override.aes = list(linetype = 0))) +
+  # ylab("Day of Year") +
+  theme_bw() +
+  theme(strip.background = element_blank())
+
 ```
 
 Plotting the raw data suggests that plants sourced from higher latitudes and those in ambient light treatments senesced sooner than those from lower latitudes and in shade treatments.
@@ -230,7 +292,7 @@ gh_data_noNA <- filter(gh_data, is.na(HarvestOrdDate)=="FALSE")
 
 # gh_data$HarvestOrdDate[is.na(gh_data$HarvestOrdDate)] <- 0
 
-senescence_mod <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), data = gh_data_noNA)
+senescence_mod <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Population) + (1|Block), data = gh_data_noNA)
 
 # qqnorm(residuals(senescence_mod))
 plot(senescence_mod)
@@ -260,27 +322,30 @@ residuals(senescence_mod)[residuals(senescence_mod) < -40]
 # gh_data[46,]$HarvestOrdDate
 
 gh_data_noNA <- gh_data_noNA[-46,]
-senescence_mod.2 <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), 
+senescence_mod2 <- lmer(HarvestOrdDate ~ Light*Herbivory*Lat + (1|Block), 
              data = gh_data_noNA) 
 
-# summary(senescence_mod.2@frame)
-# plot(senescence_mod.2)
-# plot(fitted(senescence_mod.2),residuals(senescence_mod.2))
-# qqnorm(residuals(senescence_mod.2))
+# summary(senescence_mod2@frame)
+# plot(senescence_mod2)
+# plot(fitted(senescence_mod2),residuals(senescence_mod2))
+# qqnorm(residuals(senescence_mod2))
 
-Anova(senescence_mod.2)
-step(senescence_mod.2)# keep block
-filter(dredge(refitML(senescence_mod.2)), delta < 7)
+Anova(senescence_mod2)
+step(senescence_mod2)# keep block
+filter(dredge(refitML(senescence_mod2)), delta < 7)
 ```
 
 ### Senescence: final model
 ```{r senescence final model}
 
-senescence_mod.2 <- lmer(HarvestOrdDate ~ Lat + Light + (1|Block), 
+senescence_mod2 <- lmer(HarvestOrdDate ~ Lat + Light + (1|Block), 
                          data = gh_data_noNA)
-summary(senescence_mod.2)
+summary(senescence_mod2)
+# confint(senescence_mod2)
 
-# confint(update(senescence_mod.2, . ~ Lat + Light + (1|Block)))[c(-1,-2),]
+senescence_mod3 <- lmer(HarvestOrdDate ~ Lat + Light + (1|Population) + (1|Block),
+                         data = gh_data_noNA)
+summary(senescence_mod3)
 
 ```
 
