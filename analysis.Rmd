@@ -23,7 +23,7 @@ options(na.action = "na.fail")# global model setting for using multimodel infere
 
 library(lme4); library(car); library(sciplot); library(lmerTest); 
 library(MuMIn)
-library(plyr); library(dplyr)
+library(plyr); library(dplyr); library(tidyr)
 library(ggplot2)
 library(knitr)
 
@@ -41,10 +41,111 @@ gh_data <- gh_data %>%
          first_flower_date = `Date of First Flower`, seeds_per_SH = `Seeds/SH`,
          avg_tiller_length = `Avg. tiller length`, mv_biomass = `Mv biomass`)
 
+gh_data$pop_database <- as.factor(gh_data$pop_database)
+gh_data$Herbivory <- factor(gh_data$Herbivory,
+                            levels = c("N","Y"),
+                            labels = c("No defoliation", "Defoliation"))
+
 # Correct silly duplicate value
 gh_data$Lat[gh_data$Lat<33] <- 32.58217
 gh_data$Lat <- round(gh_data$Lat, digits = 5)
 
+```
+
+```{r make dataframes}
+
+avg_gh_data <- gh_data %>% 
+  group_by(Lat, pop_lat, Herbivory, Light) %>% 
+  summarise(
+    
+    avg_harvest_date = mean(HarvestOrdDate, na.rm = T),
+    se_harvest_date = sd(HarvestOrdDate, na.rm = T) / sqrt(length(!is.na(HarvestOrdDate))),
+    
+    avg_flower_date = mean(FlowerOrdDate, na.rm = T),
+    se_flower_date = sd(FlowerOrdDate, na.rm = T) / sqrt(length(!is.na(FlowerOrdDate))),
+    
+    avg_seed_mass = mean(AvgSeedMass, na.rm = T),
+    se_seed_mass = sd(AvgSeedMass, na.rm = T) / sqrt(length(!is.na(AvgSeedMass))),
+    
+    avg_till_length = mean(avg_tiller_length, na.rm = T),
+    se_till_length = sd(avg_tiller_length, na.rm = T) / sqrt(length(!is.na(avg_tiller_length))),
+    
+    avg_seeds_per_sh = mean(seeds_per_SH, na.rm = T),
+    se_seeds_per_sh = sd(seeds_per_SH, na.rm = T) / sqrt(length(!is.na(seeds_per_SH))),
+    
+    avg_mv_biomass = mean(mv_biomass, na.rm = T),
+    se_mv_biomass = sd(mv_biomass, na.rm = T) / sqrt(length(!is.na(mv_biomass))),
+    
+    avg_sla = mean(Avg.SLA, na.rm = T),
+    se_sla = sd(Avg.SLA, na.rm = T)/sqrt(length(!is.na(Avg.SLA))),
+    
+    seed_plant_ratio = mean(AvgSeedMass/mv_biomass, na.rm = T),
+    se_seed_plant_ratio = sd(AvgSeedMass/mv_biomass, na.rm = T) / sqrt(length(!is.na(AvgSeedMass/mv_biomass)))
+    
+    ) 
+
+
+## Calculate plasticity index for each performance metric based on the light treatment
+pl_index_data <- ungroup(avg_gh_data) %>%
+  group_by(pop_lat, Herbivory) %>% 
+  summarise(
+    
+    Senescence = (max(avg_harvest_date) - min(avg_harvest_date))/max(avg_harvest_date),
+    
+    Flowering = (max(avg_flower_date) - min(avg_flower_date))/max(avg_flower_date),
+    
+    `Seed mass` = (max(avg_seed_mass) - min(avg_seed_mass))/max(avg_seed_mass),
+    
+    `Seed production` = (max(avg_seeds_per_sh) - min(avg_seeds_per_sh))/max(avg_seeds_per_sh),
+    
+    `Tiller length` = (max(avg_till_length) - min(avg_till_length))/max(avg_till_length),
+    
+    `Plant mass` = 
+      (max(avg_mv_biomass) - min(avg_mv_biomass))/max(avg_mv_biomass),
+    
+    `SLA` = (max(avg_sla) - min(avg_sla))/max(avg_sla)
+         
+    ) 
+  
+pl_index_data <- pl_index_data %>% gather(pl_attr, plasticity_index, Senescence:SLA)
+  
+pl_index_data$pop_lat <- as.factor(pl_index_data$pop_lat)
+
+
+## Pool data across populations, i.e. group by treaments only
+
+pooled_data <- gh_data %>% 
+  group_by(Herbivory, Light) %>% 
+  summarise(
+    
+    avg_harvest_date = mean(HarvestOrdDate, na.rm = T),
+    se_harvest_date = sd(HarvestOrdDate, na.rm = T) / sqrt(length(!is.na(HarvestOrdDate))),
+    
+    avg_flower_date = mean(FlowerOrdDate, na.rm = T),
+    se_flower_date = sd(FlowerOrdDate, na.rm = T) / sqrt(length(!is.na(FlowerOrdDate))),
+    
+    avg_seed_mass = mean(AvgSeedMass, na.rm = T),
+    se_seed_mass = sd(AvgSeedMass, na.rm = T) / sqrt(length(!is.na(AvgSeedMass))),
+    
+    avg_till_length = mean(avg_tiller_length, na.rm = T),
+    se_till_length = sd(avg_tiller_length, na.rm = T) / sqrt(length(!is.na(avg_tiller_length))),
+    
+    avg_seeds_per_sh = mean(seeds_per_SH, na.rm = T),
+    se_seeds_per_sh = sd(seeds_per_SH, na.rm = T) / sqrt(length(!is.na(seeds_per_SH))),
+    
+    avg_mv_biomass = mean(mv_biomass, na.rm = T),
+    se_mv_biomass = sd(mv_biomass, na.rm = T) / sqrt(length(!is.na(mv_biomass))),
+    
+    avg_sla = mean(Avg.SLA, na.rm = T),
+    se_sla = sd(Avg.SLA, na.rm = T)/sqrt(length(!is.na(Avg.SLA))),
+    
+    seed_plant_ratio = mean(AvgSeedMass/mv_biomass, na.rm = T),
+    se_seed_plant_ratio = sd(AvgSeedMass/mv_biomass, na.rm = T) / sqrt(length(!is.na(AvgSeedMass/mv_biomass)))
+    
+    )
+
+
+## Exclude plants in the herbivory treatment
 no_herbivory <- filter(gh_data, Herbivory=="N")
 
 avg_gh_data_no_herb <- no_herbivory %>% 
@@ -58,21 +159,30 @@ avg_gh_data_no_herb <- no_herbivory %>%
             avg_sla = mean(Avg.SLA, na.rm = T),
             seed_plant_ratio = avg_seed_mass/avg_mv_biomass)
 
-avg_gh_data <- gh_data %>% 
-  group_by(Lat, pop_lat, Herbivory, Light) %>% 
-  summarise(avg_harvest_date = mean(HarvestOrdDate, na.rm = T),
-            avg_flower_date = mean(FlowerOrdDate, na.rm = T),
-            se_flower_date = sd(FlowerOrdDate, na.rm = T)/sqrt(length(!is.na(FlowerOrdDate))),
-            avg_seed_mass = mean(AvgSeedMass, na.rm = T),
-            avg_tiller_length = mean(avg_tiller_length, na.rm = T),
-            avg_seeds_per_sh = mean(seeds_per_SH, na.rm = T),
-            avg_mv_biomass = mean(mv_biomass, na.rm = T),
-            avg_sla = mean(Avg.SLA, na.rm = T),
-            seed_plant_ratio = mean(AvgSeedMass/mv_biomass, na.rm = T))
-
 ```
 
 An investigation into phenotypic plasticity of *Microstegium* across a latitudinal gradient with experimental treatments of light and herbivory.
+
+```{r plot plasticity index}
+
+# ggplot(select(pl_index_data, pop_lat, Herbivory, mv_biomass_pl_index), 
+#        aes(x = pop_lat, y = mv_biomass_pl_index)) +
+#   geom_bar(stat = "identity") +
+#   coord_flip() +
+#   facet_grid(.~Herbivory) +
+#   theme_bw()
+
+
+ggplot(pl_index_data, aes(x = pop_lat, y = plasticity_index)) +
+  geom_bar(aes(fill = Herbivory), stat = "identity", position = "dodge") +
+  coord_flip() +
+  facet_grid(pl_attr+Herbivory~.) +
+  theme_bw() +
+  ylab("Plasticity index") + xlab("Population") +
+  theme(strip.background = element_blank()) +
+  theme(legend.title = element_blank())
+
+```
 
 
 # Methods
@@ -115,19 +225,25 @@ A mixed-effects models were applied to examine the interaction of light and herb
 
 The date of first flowering is ordered by day of year, so larger numbers indicate later in the calendar year.
 
+Were all the plants started at the same time? If so, would it make sense to calculate the number days until first flowering? It should probably show the same relationship.
+
 What is the biological significance of flowering date?
 
 ### Day of firest flowering figure
-```{r day of first flower prelim figures}
+```{r flowering_prelim_fig}
 
-ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
-  geom_point() +
-  scale_color_discrete(h = c(50,110)) +
-  geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
+ggplot(gh_data, aes(Lat, FlowerOrdDate)) +
+  # geom_point(aes(shape = Herbivory)) +
+  # stat_summary(fun.y = mean, geom = "line") +
+  stat_summary(fun.data = mean_se, geom = "pointrange", aes(shape = Herbivory, color = Light)) +
+  scale_color_grey(start = .8, end = .2) +
+  geom_smooth(aes(color = Light, linetype = Herbivory), method = "lm", se = F) +
   # theme_bw() +
   theme_classic() +
   ylab("Day of first flowering") +
-  xlab("Latitude")
+  xlab("Latitude") +
+  guides(linetype = guide_legend(override.aes = list(size = .7)),
+             color = guide_legend(override.aes = list(linetype = 0)))
 
 # ggplot(gh_data, aes(Long, FlowerOrdDate, color = Light)) +
 #   geom_point() +
@@ -142,12 +258,14 @@ ggplot(gh_data, aes(Lat, FlowerOrdDate, color = Light)) +
 #             ylab = "Flower Day", xlab = "Population latitude",
 #             err.width = .05, y.leg = 310, ylim = c(245,310))
 
-avg_gh_data$Herbivory <- factor(avg_gh_data$Herbivory, levels = c("N","Y"), labels = c("No Herbivory", "Herbivory"))
-ggplot(filter(avg_gh_data), 
-       aes(factor(pop_lat), avg_flower_date, fill = Light)) +
+```
+
+```{r flowering_barplot}
+
+ggplot(avg_gh_data, aes(factor(pop_lat), avg_flower_date, fill = Light)) +
   geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
   geom_errorbar(aes(ymin = avg_flower_date - se_flower_date, ymax = avg_flower_date + se_flower_date), width = .1, position=position_dodge(width = .7)) +
-  scale_fill_manual(values = c("grey97","grey35"))+
+  scale_fill_manual(values = c("grey97","grey35")) +
   # scale_fill_discrete(h = c(120,40),l = 70) +
   facet_wrap(~Herbivory) +
   # theme_classic() +
@@ -158,22 +276,40 @@ ggplot(filter(avg_gh_data),
         legend.title = element_blank())
 # ggsave("Figures/flowering_bargraph.png", dpi = 600, width = 7.5)
 
+```
 
-# ggplot(avg_gh_data,
-#        aes(Light, avg_flower_date, color = as.numeric(Lat))) +
-#   # geom_boxplot()+
-#   geom_path(aes(group = Lat)) +
-#   geom_point(size = 2) +
-#   facet_wrap(~Herbivory) +
-#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-#   scale_color_continuous(low = "green", high = "brown") +
-#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
-#              # color = guide_legend(override.aes = list(linetype = 0))) +
-#   # ylab("Day of Year") +
-#   theme_bw() +
-#   theme(strip.background = element_blank())
+```{r flowering_react_norm}
+
+ggplot(avg_gh_data, aes(Light, avg_flower_date, color = Lat)) +
+  # geom_boxplot()+
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  facet_wrap(~Herbivory) +
+  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+  scale_color_continuous(low = "green", high = "brown") +
+  # guides(linetype = guide_legend(override.aes = list(size = .7)),
+             # color = guide_legend(override.aes = list(linetype = 0))) +
+  ylab("Flowering day of year") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank())
+
+ggplot(pooled_data, aes(Light, avg_flower_date)) +
+  geom_path(aes(linetype = Herbivory, group = Herbivory)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("green", "brown")) +
+  # guides(linetype = guide_legend(override.aes = list(size = .7)),
+             # color = guide_legend(override.aes = list(linetype = 0))) +
+  ylab("Flowering day of year") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
 
 ```
+
 
 These figures indicate that flowering date is earlier at higher latitudes, and that herbivory and light treatments are not siginificant.
 
@@ -215,7 +351,7 @@ Latitude of the origin population was the only signficant explanatory variable f
 1. What is the relationship between harvest date and senescence?
 
 ### Senescence (harvest date) figure
-```{r senescence prelim figure}
+```{r senescence_prelim_figure}
 
 ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light)) +
   geom_point() +
@@ -224,20 +360,8 @@ ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light)) +
   # theme_bw() +
   theme_classic() +
   ylab("Day of harvest") +
-  xlab("Latitude")
-
-# ggplot(avg_gh_data, 
-#        aes(Light, avg_harvest_date, color = as.numeric(Lat))) +
-#   # geom_boxplot()+
-#   geom_path(aes(group = Lat)) +
-#   geom_point(size = 2) +
-#   facet_wrap(~Herbivory) +
-#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-#   scale_color_continuous(low = "green", high = "brown") +
-#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
-#              # color = guide_legend(override.aes = list(linetype = 0))) +
-#   # ylab("Day of Year") +
-#   theme_bw()
+  xlab("Latitude") +
+  guides(linetype = guide_legend())
 
 # ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light, shape = Herbivory)) +
 #   geom_point() +
@@ -253,34 +377,64 @@ ggplot(gh_data, aes(Lat, HarvestOrdDate, color = Light)) +
 #   scale_fill_discrete(h = c(60,120)) +
 #   theme_bw()
 
+```
+
+```{r senescence_barplot}
+
 ggplot(avg_gh_data, aes(factor(pop_lat), avg_harvest_date, fill = Light)) +
   geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
-  geom_errorbar(aes(ymin = avg_flower_date - se_flower_date, ymax = avg_flower_date + se_flower_date), width = .1, position=position_dodge(width = .7)) +
+  geom_errorbar(aes(ymin = avg_harvest_date - se_harvest_date, ymax = avg_harvest_date + se_harvest_date), width = .1, position=position_dodge(width = .7)) +
   scale_fill_manual(values = c("grey97","grey35"))+
-  # scale_fill_discrete(h = c(120,40),l = 70) +
   facet_wrap(~Herbivory) +
   # theme_classic() +
   theme_bw() +
-  xlab("Population") + ylab("Average day of first flower") +
+  xlab("Population") + ylab("Average day of senescence (harvest)") +
   theme(strip.background = element_blank(),
         panel.grid = element_blank(),
         legend.title = element_blank())
 
-ggplot(avg_gh_data,
-       aes(Light, avg_harvest_date, color = (pop_lat))) +
-  # geom_boxplot()+
+```
+
+```{r senescence_react_norm}
+
+ggplot(avg_gh_data, aes(Light, avg_harvest_date, color = Lat)) +
   geom_path(aes(group = Lat)) +
   geom_point(size = 2) +
   facet_wrap(~Herbivory) +
-  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
   scale_color_continuous(low = "green", high = "brown") +
-  # guides(linetype = guide_legend(override.aes = list(size = .7)),
-             # color = guide_legend(override.aes = list(linetype = 0))) +
-  # ylab("Day of Year") +
+  ylab("Harvest (senescence) day of year") +
+  xlab("") +
   theme_bw() +
-  theme(strip.background = element_blank())
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank())
+
+ggplot(pooled_data, aes(Light, avg_harvest_date)) +
+  geom_path(aes(linetype = Herbivory, group = Herbivory)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("green", "brown")) +
+  ylab("Harvest (senescence) day of year") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+
+# ggplot(avg_gh_data,
+#        aes(Light, avg_harvest_date, color = (pop_lat))) +
+#   # geom_boxplot()+
+#   geom_path(aes(group = Lat)) +
+#   geom_point(size = 2) +
+#   facet_wrap(~Herbivory) +
+#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+#   scale_color_continuous(low = "green", high = "brown") +
+#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
+#              # color = guide_legend(override.aes = list(linetype = 0))) +
+#   # ylab("Day of Year") +
+#   theme_bw() +
+#   theme(strip.background = element_blank())
 
 ```
+
 
 Plotting the raw data suggests that plants sourced from higher latitudes and those in ambient light treatments senesced sooner than those from lower latitudes and in shade treatments.
 
@@ -413,39 +567,67 @@ summary(senescence_mod.2)
 1. How many tillers were measured to calculate the average for each plant?
 
 ### Tiller length figure
-```{r prelim plots avg tiller length}
+```{r tiller_length_prelim_fig}
 
-ggplot(gh_data, aes(Lat, avg_tiller_length, color = Light)) +
-  geom_point() +
+ggplot(gh_data, aes(Lat, avg_tiller_length, color = Light, shape = Herbivory, linetype = Herbivory)) +
+  # geom_point() +
+  # stat_summary(fun.y = mean, geom = "line") +
+  stat_summary(fun.data = mean_se, geom = "pointrange") +
   scale_color_discrete(h = c(50,110)) +
   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
   # theme_bw() +
   theme_classic() +
   ylab("Average tiller length (cm)") +
-  xlab("Latitude")
-
-# ggplot(gh_data, aes(Light, avg_tiller_length, fill = Herbivory)) +
-#   geom_boxplot(notch = T) +
-#   scale_fill_discrete(h = c(60,120)) +
-#   ylab("Tiller length (cm)") +
-#   theme_classic()
-  # theme_bw()
+  xlab("Latitude") +
+  theme()
 
 # tiller_length <- gh_data %>% 
 #   group_by(pop_lat, Light) %>% 
 #   summarise(avg_tiller_length = mean(avg_tiller_length, na.rm = T),
 #             avg_seed_mass = mean(AvgSeedMass, na.rm = T))
 
-# ggplot(avg_gh_data_light, 
-#        aes(Light, avg_tiller_length, color = pop_lat)) +
-#   geom_path(aes(group = pop_lat)) +
-#   geom_point(size = 2) +
-#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-#   scale_color_continuous(low = "green", high = "brown") +
-#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
-#              # color = guide_legend(override.aes = list(linetype = 0))) +
-#   # ylab("Day of Year") +
-#   theme_classic()
+```
+
+```{r tiller_length_barplot}
+
+ggplot(avg_gh_data, aes(factor(pop_lat), avg_harvest_date, fill = Light)) +
+  geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
+  geom_errorbar(aes(ymin = avg_harvest_date - se_harvest_date, ymax = avg_harvest_date + se_harvest_date), width = .1, position=position_dodge(width = .7)) +
+  scale_fill_manual(values = c("grey97","grey35"))+
+  facet_wrap(~Herbivory) +
+  # theme_classic() +
+  theme_bw() +
+  xlab("Population") + ylab("Average day of senescence (harvest)") +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+
+```
+
+```{r tiller_length_react_norm}
+
+ggplot(avg_gh_data, aes(Light, avg_till_length, color = Lat)) +
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  scale_color_continuous(low = "green", high = "brown") +
+  facet_grid(.~Herbivory) +
+  ylab("Average tiller length (cm)") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank())
+
+
+ggplot(pooled_data, aes(Light, avg_till_length)) +
+  geom_path(aes(linetype = Herbivory, group = Herbivory)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("green", "brown")) +
+  ylab("Average tiller length (cm)") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
 
 ```
 
@@ -491,9 +673,11 @@ filter(dredge(refitML(tiller_mod)), delta < 7)
 
 ```{r tiller length final model}
 
-tillermod_2 <- lmer(avg_tiller_length ~ Lat + Light + Herbivory + (1|Block), data = gh_data_noNA)
-summary(tillermod_2)
+tiller_mod2 <- lmer(avg_tiller_length ~ Lat + Light + Herbivory + pop_lat + (1|Block), data = gh_data_noNA)
+summary(tiller_mod2)
 # confint(update(tiller_mod, . ~ Lat + Light + Herbivory + (1|Block)))[c(-1,-2),]
+
+
 
 ```
 
@@ -517,19 +701,52 @@ ggplot(gh_data, aes(Lat, mv_biomass, color = Light)) +
   ylab("Plant biomass (g)") +
   xlab("Latitude")
 
-# ggplot(avg_gh_data, aes(Light, avg_mv_biomass, color = Lat)) +
-#   # geom_boxplot()+
-#   geom_path(aes(group = Lat)) +
-#   geom_point(size = 2) +
-#   facet_wrap(~Herbivory) +
-#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-#   scale_color_continuous(low = "green", high = "brown") +
-#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
-#              # color = guide_legend(override.aes = list(linetype = 0))) +
-#   # ylab("Day of Year") +
-#   theme_bw()
+```
+
+```{r mv_biomass_barplot}
+
+ggplot(avg_gh_data, aes(factor(pop_lat), avg_mv_biomass, fill = Light)) +
+  geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
+  geom_errorbar(aes(ymin = avg_mv_biomass - se_mv_biomass, ymax = avg_mv_biomass + se_mv_biomass), width = .1, position=position_dodge(width = .7)) +
+  scale_fill_manual(values = c("grey97","grey35"))+
+  facet_wrap(~Herbivory) +
+  # theme_classic() +
+  theme_bw() +
+  xlab("Population") + 
+  ylab("Average plant biomass (g)") +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
 
 ```
+
+```{r mv_biomass_react_norm}
+
+ggplot(avg_gh_data, aes(Light, avg_mv_biomass, color = Lat)) +
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  scale_color_continuous(low = "green", high = "brown") +
+  facet_grid(.~Herbivory) +
+  ylab("Plant biomass (g)") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank())
+
+
+ggplot(pooled_data, aes(Light, avg_mv_biomass)) +
+  geom_path(aes(linetype = Herbivory, group = Herbivory)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("green", "brown")) +
+  ylab("Plant biomass (g)") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+
+```
+
 
 Main effects of light and herbivory are apparent (and interaction?), with perhaps a weak main effect of latitude.
 
@@ -599,7 +816,7 @@ There was substantial heterskedacity in the residuals of the raw biomass data, s
 
 ### Seeds production figure
 
-```{r plot seeds}
+```{r seed_production_prelim_fig}
 
 # ggplot(gh_data, aes(Light, seeds_per_SH, fill = Herbivory)) +
 #   geom_boxplot(notch = F) +
@@ -623,6 +840,53 @@ ggplot(gh_data, aes(Lat, seeds_per_SH, color = Light)) +
 #   theme_classic() +
 #   ylab("Seeds per seed head") +
 #   xlab("Longitude")
+```
+
+```{r seed_production_barplot}
+
+ggplot(avg_gh_data, aes(factor(pop_lat), avg_seeds_per_sh, fill = Light)) +
+  geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
+  geom_errorbar(aes(ymin = avg_seeds_per_sh - se_seeds_per_sh, ymax = avg_seeds_per_sh + se_seeds_per_sh), width = .1, position=position_dodge(width = .7)) +
+  scale_fill_manual(values = c("grey97","grey35"))+
+  facet_wrap(~Herbivory) +
+  # theme_classic() +
+  theme_bw() +
+  xlab("Population") + 
+  ylab("Average seeds per seed head") +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+
+```
+
+```{r seed_production_react_norm}
+
+ggplot(avg_gh_data,
+       aes(Light, avg_seeds_per_sh, color = Lat)) +
+  # geom_boxplot()+
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  facet_wrap(~Herbivory) +
+  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+  scale_color_continuous(low = "green", high = "brown") +
+  # guides(linetype = guide_legend(override.aes = list(size = .7)),
+             # color = guide_legend(override.aes = list(linetype = 0))) +
+  ylab("Average seeds per seed head") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank())
+
+
+ggplot(pooled_data, aes(Light, avg_seeds_per_sh)) +
+  geom_path(aes(linetype = Herbivory, group = Herbivory)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("green", "brown")) +
+  ylab("Average seeds per seed head") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
 
 ```
 
@@ -667,6 +931,8 @@ seeds_mod2 <- lmer(seeds_per_SH ~ Lat + Herbivory + Light + Herbivory:Lat + (1|B
 
 summary(seeds_mod2)
 
+seeds_mod3 <- lmer(seeds_per_SH ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block) + (1|pop_lat), data = gh_data_noNA)
+
 # kable(confint.merMod(update(seeds_mod2, . ~ Lat + Herbivory + Light + Herbivory:Lat + (1|Block)))[c(-1, -2),], caption = "95% confidence intervals for coefficient estimates.")
 
 ```
@@ -690,31 +956,67 @@ The main effects of latitude, herbivory, and light were statistically significan
 
 ### Seed mass figure
 
-```{r seed mass prelim figures}
+```{r seed_mass_prelim_figure}
 
-ggplot(gh_data, aes(Lat, AvgSeedMass, color = Light)) +
+ggplot(gh_data, aes(Lat, AvgSeedMass*1000, color = Light)) +
   geom_point() +
   scale_color_discrete(h = c(50,110)) +
   geom_smooth(aes(linetype = Herbivory), method = "lm", se = F) +
   # theme_bw() +
   theme_classic() +
-  ylab("Average seed mass (g)") +
+  ylab("Average seed mass (mg)") +
   xlab("Latitude")
 
-# ggplot(avg_gh_data,
-#        aes(Light, avg_seed_mass, color = Lat)) +
-#   # geom_boxplot()+
-#   geom_path(aes(group = Lat)) +
-#   geom_point(size = 2) +
-#   facet_wrap(~Herbivory) +
-#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-#   scale_color_continuous(low = "green", high = "brown") +
-#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
-#              # color = guide_legend(override.aes = list(linetype = 0))) +
-#   # ylab("Day of Year") +
-#   theme_bw()
+```
+
+```{r seed_mass_barplot}
+
+ggplot(avg_gh_data, aes(factor(pop_lat), avg_seed_mass*1000, fill = Light)) +
+  geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
+  geom_errorbar(aes(ymin = avg_seed_mass*1000 - se_seed_mass*1000, ymax = avg_seed_mass*1000 + se_seed_mass*1000), width = .1, position=position_dodge(width = .7)) +
+  scale_fill_manual(values = c("grey97","grey35"))+
+  facet_wrap(~Herbivory) +
+  # theme_classic() +
+  theme_bw() +
+  xlab("Population") + 
+  ylab("Average seed mass (mg)") +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
 
 ```
+
+```{r seed_mass_react_norm}
+
+ggplot(avg_gh_data,
+       aes(Light, avg_seed_mass*1000, color = Lat)) +
+  # geom_boxplot()+
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  facet_wrap(~Herbivory) +
+  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+  scale_color_continuous(low = "green", high = "brown") +
+  # guides(linetype = guide_legend(override.aes = list(size = .7)),
+             # color = guide_legend(override.aes = list(linetype = 0))) +
+  ylab("Average seed mass (mg)") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank())
+
+
+ggplot(pooled_data, aes(Light, avg_seed_mass*1000)) +
+  geom_path(aes(linetype = Herbivory, group = Herbivory)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("green", "brown")) +
+  ylab("Average seed mass (mg)") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+
+```
+
 
 It looks like main effects of latitude and light are likely to be significant, with seed mass lower at higher latitudes, but greater in the shade.
 
@@ -746,6 +1048,9 @@ seed_mass_mod2 <- lmer(AvgSeedMass ~ Lat + Light + Light:Lat + (1|Block),
                        data = gh_data_noNA)
 # plot(seed_mass_mod2)
 summary(seed_mass_mod2)
+
+seed_mass_mod3 <- lmer(AvgSeedMass ~ FlowerOrdDate + Lat + Light + Light:Lat + (1|Block), na.action = "na.omit", data = gh_data_noNA)
+summary(seed_mass_mod3)
 
 ```
  
@@ -795,7 +1100,7 @@ The herbivory effect is confounded because plant mass was removed. I don't see a
 
 ### Specific leaf area figure
 
-```{r prelim sla figures}
+```{r sla_prelim_figure}
 
 ggplot(gh_data, aes(Lat, Avg.SLA, color = Light)) +
   geom_point() +
@@ -806,21 +1111,59 @@ ggplot(gh_data, aes(Lat, Avg.SLA, color = Light)) +
   ylab("Average SLA") +
   xlab("Latitude")
 
-# ggplot(avg_gh_data, 
-#        aes(Light, avg_sla, color = Lat)) +
-#   # geom_boxplot()+
-#   geom_path(aes(group = Lat)) +
-#   geom_point(size = 2) +
-#   # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
-#   scale_color_continuous(low = "green", high = "brown") +
-#   # guides(linetype = guide_legend(override.aes = list(size = .7)),
-#              # color = guide_legend(override.aes = list(linetype = 0))) +
-#   # ylab("Day of Year") +
-#   theme_bw()
+```
+
+```{r sla_barplot}
+
+ggplot(avg_gh_data, aes(factor(pop_lat), avg_sla, fill = Light)) +
+  geom_bar(stat = "identity", position = "dodge", width = .7, color = "black") +
+  geom_errorbar(aes(ymin = avg_sla - se_sla, ymax = avg_sla + se_sla), width = .1, position=position_dodge(width = .7)) +
+  scale_fill_manual(values = c("grey97","grey35"))+
+  facet_wrap(~Herbivory) +
+  # theme_classic() +
+  theme_bw() +
+  xlab("Population") + 
+  ylab("Average SLA") +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
 
 ```
 
+```{r sla_react_norm}
+
+ggplot(avg_gh_data,
+       aes(Light, avg_sla, color = Lat)) +
+  # geom_boxplot()+
+  geom_path(aes(group = Lat)) +
+  geom_point(size = 2) +
+  facet_wrap(~Herbivory) +
+  # geom_smooth(aes(linetype = Light), method = "lm", se = F) +
+  scale_color_continuous(low = "green", high = "brown") +
+  # guides(linetype = guide_legend(override.aes = list(size = .7)),
+             # color = guide_legend(override.aes = list(linetype = 0))) +
+  ylab("Average SLA") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank())
+
+
+ggplot(pooled_data, aes(Light, avg_sla)) +
+  geom_path(aes(linetype = Herbivory, group = Herbivory)) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("green", "brown")) +
+  ylab("Average SLA") +
+  xlab("") +
+  theme_bw() +
+  theme(strip.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_blank())
+
+```
+
+
 ### SLA model
+
 ```{r sla model}
 
 gh_data_noNA <- filter(gh_data, is.na(Avg.SLA)=="FALSE")
